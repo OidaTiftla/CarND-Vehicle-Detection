@@ -9,8 +9,10 @@ class Camera:
     def save(self, fname):
         pickle.dump((self.mtx, self.dist), open(fname, "wb"))
 
-    def load(self, fname):
-        self.mtx, self.dist = pickle.load(open(fname, "rb"))
+    @classmethod
+    def from_file(cls, fname):
+        mtx, dist = pickle.load(open(fname, "rb"))
+        return cls(mtx, dist)
 
     def undistort(self, img):
         # Undistorts an image
