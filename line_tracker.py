@@ -12,6 +12,8 @@ class LineTracker:
         img = self.perspective_transform(img, verbose)
         left_fit, right_fit, ploty = self.locate_lane_lines(img, verbose)
         left_curverad, right_curverad = self.measure_curvature(left_fit, right_fit, ploty, verbose)
+        middlex_img = img.shape[1] / 2
+        offset = self.measure_position_offset_from_middle(left_fit, right_fit, ploty, middlex_img, verbose)
         return img
 
     def color_and_gradient_filtering(self, img, verbose=False):
@@ -229,3 +231,14 @@ class LineTracker:
         right_curverad = ((1 + (2 * right_fit[0] * y_eval + right_fit[1]) ** 2) ** 1.5) / np.absolute(2 * right_fit[0])
 
         return left_curverad, right_curverad
+
+    def measure_position_offset_from_middle(self, left_fit, right_fit, ploty, middlex_img, verbose=False):
+        # Define y-value where we want radius of curvature
+        # I'll choose the maximum y-value, corresponding to the bottom of the image
+        y_eval = np.max(ploty)
+        leftx = left_fit[0] * y_eval ** 2 + left_fit[1] * y_eval + left_fit[2]
+        rightx = right_fit[0] * y_eval ** 2 + right_fit[1] * y_eval + right_fit[2]
+        middlex = (leftx + rightx) / 2
+        offset = middlex - middlex_img
+
+        return offset
