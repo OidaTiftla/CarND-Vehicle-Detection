@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 def process_image(img):
     global line_tracker
     img = cam.undistort(img)
-    img = line_tracker.process(img)
+    img = line_tracker.process(img, args.verbose)
     img = helper.ensure_color(img)
     # NOTE: The output you return should be a color image (3 channel) for processing video below
     return img
