@@ -6,7 +6,7 @@ class LineTracker:
     def __init__(self):
         pass
 
-    def process(self, img, verbose=False):
+    def process(self, img, verbose=0):
         # Note: img is the undistorted image
         img_processed = self.color_and_gradient_filtering(img, verbose)
         img_processed, M, Minv = self.perspective_transform(img_processed, verbose)
@@ -17,7 +17,7 @@ class LineTracker:
         img = self.visualize(img, M, Minv, left_fit, right_fit, ploty, left_curverad, right_curverad, offset, verbose)
         return img
 
-    def color_and_gradient_filtering(self, img, verbose=False):
+    def color_and_gradient_filtering(self, img, verbose=0):
         # Convert to HLS color space and separate the S channel
         hls = cv2.cvtColor(img, cv2.COLOR_RGB2HLS)
         s_channel = hls[:,:,2]
@@ -52,7 +52,7 @@ class LineTracker:
         combined_binary = np.zeros_like(binary_sobelx)
         combined_binary[(s_binary == 1) | (binary_sobelx == 1)] = 1
 
-        if verbose:
+        if verbose >= 3:
             # Plotting thresholded images
             import matplotlib.pyplot as plt
             f, (ax1, ax2) = plt.subplots(1, 2, figsize=(20,10))
@@ -65,7 +65,7 @@ class LineTracker:
         # return binary filter
         return combined_binary
 
-    def perspective_transform(self, img, verbose=False):
+    def perspective_transform(self, img, verbose=0):
         img_size = (img.shape[1], img.shape[0])
 
         # Define calibration box in source (original) and destination (desired or warped) coordinates
@@ -88,7 +88,7 @@ class LineTracker:
              [img_size[0] - int((img_size[0] * (1. - bottom_width * horizontal_offset)) / 2.), img_size[1] - int(img_size[1] * vertical_offset)],
              [int((img_size[0] * (1. - bottom_width * horizontal_offset)) / 2.), img_size[1] - int(img_size[1] * vertical_offset)]])
 
-        if verbose:
+        if verbose >= 4:
             # Source image points
             import matplotlib.pyplot as plt
             plt.imshow(img)
@@ -106,7 +106,7 @@ class LineTracker:
         # Create warped image - uses linear interpolation
         warped = cv2.warpPerspective(img, M, img_size, flags=cv2.INTER_LINEAR)
 
-        if verbose:
+        if verbose >= 4:
             # Visualize undistortion
             import matplotlib.pyplot as plt
             f, (ax1, ax2) = plt.subplots(1, 2, figsize=(20,10))
@@ -119,11 +119,11 @@ class LineTracker:
         # return warped
         return warped, M, Minv
 
-    def locate_lane_lines(self, img, verbose=False):
+    def locate_lane_lines(self, img, verbose=0):
         # Assuming the imput image is a warped binary image
         # Take a histogram of the bottom half of the image
         histogram = np.sum(img[img.shape[0]//2:,:], axis=0)
-        if verbose:
+        if verbose >= 3:
             # Create an output image to draw on and visualize the result
             out_img = helper.ensure_color(img * 255)
         # Find the peak of the left and right halves of the histogram
@@ -160,7 +160,7 @@ class LineTracker:
             win_xleft_high = leftx_current + margin
             win_xright_low = rightx_current - margin
             win_xright_high = rightx_current + margin
-            if verbose:
+            if verbose >= 3:
                 # Draw the windows on the visualization image
                 cv2.rectangle(out_img,
                     (win_xleft_low, win_y_low),
@@ -207,7 +207,7 @@ class LineTracker:
         right_fit = np.polyfit(righty, rightx, 2)
 
         ploty = np.linspace(0, img.shape[0] - 1, img.shape[0])
-        if verbose:
+        if verbose >= 3:
             # Generate x and y values for plotting
             import matplotlib.pyplot as plt
             left_fitx = left_fit[0] * ploty ** 2 + left_fit[1] * ploty + left_fit[2]
@@ -224,7 +224,7 @@ class LineTracker:
 
         return left_fit, right_fit, ploty
 
-    def measure_curvature(self, left_fit, right_fit, ploty, verbose=False):
+    def measure_curvature(self, left_fit, right_fit, ploty, verbose=0):
         # Define y-value where we want radius of curvature
         # I'll choose the maximum y-value, corresponding to the bottom of the image
         y_eval = np.max(ploty)
@@ -233,7 +233,7 @@ class LineTracker:
 
         return left_curverad, right_curverad
 
-    def measure_position_offset_from_middle(self, left_fit, right_fit, ploty, middlex_img, verbose=False):
+    def measure_position_offset_from_middle(self, left_fit, right_fit, ploty, middlex_img, verbose=0):
         # Define y-value where we want radius of curvature
         # I'll choose the maximum y-value, corresponding to the bottom of the image
         y_eval = np.max(ploty)
@@ -244,7 +244,7 @@ class LineTracker:
 
         return offset
 
-    def visualize(self, img, M, Minv, left_fit, right_fit, ploty, left_curverad, right_curverad, offset, verbose=False):
+    def visualize(self, img, M, Minv, left_fit, right_fit, ploty, left_curverad, right_curverad, offset, verbose=0):
         # Create an image to draw the lines on
         warp_zero = np.zeros_like(img[:,:,0]).astype(np.uint8)
         color_warp = helper.ensure_color(warp_zero)
@@ -264,8 +264,9 @@ class LineTracker:
         # Combine the result with the original image
         img = cv2.addWeighted(img, 1, newwarp, 0.3, 0)
 
-        # add some infos
-        cv2.putText(img, "Curvature: {:.2f}".format((left_curverad + right_curverad) / 2), (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 255), 2)
-        cv2.putText(img, "Offset: {:.2f}".format(offset), (50, 90), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 255), 2)
+        if verbose >= 1:
+            # add some infos
+            cv2.putText(img, "Curvature: {:.2f}".format((left_curverad + right_curverad) / 2), (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 255), 2)
+            cv2.putText(img, "Offset: {:.2f}".format(offset), (50, 90), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 255), 2)
 
         return img

@@ -2,7 +2,7 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("-i", "--input", help="the input video (.mp4,.jpg,.png)", nargs='+')
 parser.add_argument("--calib", help="the calibration file for the camera (.p)", default='camera.p')
-parser.add_argument("-v", "--verbose", help="show each image", action='store_true')
+parser.add_argument("-v", "--verbose", help="level of verbosity (specify this option up to 4 times, for the most detailed output)", action='count', default=0)
 parser.add_argument("-o", "--output", help="save output into output directory", action='store_true')
 args = parser.parse_args()
 
@@ -57,7 +57,7 @@ for fname in args.input:
         img = process_image(img)
         if args.output:
             helper.write_img(img, 'output/' + os.path.basename(fname))
-        if args.verbose:
+        if args.verbose >= 2:
             plt.imshow(img)
             plt.show()
     elif ext in ['.mp4']:
