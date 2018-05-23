@@ -206,10 +206,10 @@ class LineTracker:
         left_fit = np.polyfit(lefty, leftx, 2)
         right_fit = np.polyfit(righty, rightx, 2)
 
+        ploty = np.linspace(0, img.shape[0] - 1, img.shape[0])
         if verbose:
             # Generate x and y values for plotting
             import matplotlib.pyplot as plt
-            ploty = np.linspace(0, img.shape[0] - 1, img.shape[0])
             left_fitx = left_fit[0] * ploty ** 2 + left_fit[1] * ploty + left_fit[2]
             right_fitx = right_fit[0] * ploty ** 2 + right_fit[1] * ploty + right_fit[2]
 
