@@ -2,7 +2,7 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("-i", "--input", help="the input video (.mp4,.jpg,.png)", nargs='+')
 parser.add_argument("--calib", help="the calibration file for the camera (.p)", default='camera.p')
-# parser.add_argument("-v", "--verbose", help="show each image", action='store_true')
+parser.add_argument("-v", "--verbose", help="show each image", action='store_true')
 args = parser.parse_args()
 
 print("Load calibration from:", args.calib)
@@ -13,12 +13,33 @@ import numpy as np
 import cv2
 import matplotlib.pyplot as plt
 
-def process_img(img):
-    pass
+def detect_lane_lines(img):
+    img = cam.undistort(img)
+    return img
+
+def process_image(img):
+    img = detect_lane_lines(img)
+    img = helper.ensure_color(img)
+    # NOTE: The output you return should be a color image (3 channel) for processing video below
+    return img
 
 def process_video(fname):
     # Import everything needed to edit/save/watch video clips
     from moviepy.editor import VideoFileClip
+
+    # nowStr for the filenames of the outputs
+    import datetime
+    now = datetime.datetime.now()
+    nowStr = now.strftime("%Y-%m-%d_%H-%M-%S")
+    output_fname = 'output/' + os.path.splitext(fname)[0] + '_' + nowStr + '.mp4'
+    ## To speed up the testing process you may want to try your pipeline on a shorter subclip of the video
+    ## To do so add .subclip(start_second,end_second) to the end of the line below
+    ## Where start_second and end_second are integer values representing the start and end of the subclip
+    ## You may also uncomment the following line for a subclip of the first 5 seconds
+    ##clip = VideoFileClip(fname).subclip(0,5)
+    clip = VideoFileClip(fname)
+    white_clip = clip.fl_image(process_image) #NOTE: this function expects color images!!
+    white_clip.write_videofile(white_output, audio=False)
 
 import os
 import helper
@@ -29,7 +50,11 @@ for fname in args.input:
         # Read image
         print("Read image:", fname)
         img = helper.read_img(fname)
-        process_img(img)
+        img = process_image(img)
+        helper.write_img(img, 'output/' + os.path.basename(fname))
+        if args.verbose:
+            plt.imshow(img)
+            plt.show()
     elif ext in ['.mp4']:
         # Read video
         process_video(fname)
