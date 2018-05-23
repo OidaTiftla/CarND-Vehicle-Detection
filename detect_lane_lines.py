@@ -3,6 +3,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("-i", "--input", help="the input video (.mp4,.jpg,.png)", nargs='+')
 parser.add_argument("--calib", help="the calibration file for the camera (.p)", default='camera.p')
 parser.add_argument("-v", "--verbose", help="show each image", action='store_true')
+parser.add_argument("-o", "--output", help="save output into output directory", action='store_true')
 args = parser.parse_args()
 
 print("Load calibration from:", args.calib)
@@ -37,7 +38,8 @@ def process_video(fname):
     ##clip = VideoFileClip(fname).subclip(0,5)
     clip = VideoFileClip(fname)
     white_clip = clip.fl_image(process_image) #NOTE: this function expects color images!!
-    white_clip.write_videofile(white_output, audio=False)
+    if args.output:
+        white_clip.write_videofile(white_output, audio=False)
 
 import os
 import helper
@@ -53,7 +55,8 @@ for fname in args.input:
         img = helper.read_img(fname)
         line_tracker = LineTracker()
         img = process_image(img)
-        helper.write_img(img, 'output/' + os.path.basename(fname))
+        if args.output:
+            helper.write_img(img, 'output/' + os.path.basename(fname))
         if args.verbose:
             plt.imshow(img)
             plt.show()
