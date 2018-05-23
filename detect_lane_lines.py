@@ -37,9 +37,9 @@ def process_video(fname):
     ## You may also uncomment the following line for a subclip of the first 5 seconds
     ##clip = VideoFileClip(fname).subclip(0,5)
     clip = VideoFileClip(fname)
-    white_clip = clip.fl_image(process_image) #NOTE: this function expects color images!!
+    clip = clip.fl_image(process_image) #NOTE: this function expects color images!!
     if args.output:
-        white_clip.write_videofile(white_output, audio=False)
+        clip.write_videofile(output_fname, audio=False)
 
 import os
 import helper
