@@ -10,7 +10,7 @@ class LineTracker:
         # Note: img is the undistorted image
         img = self.color_and_gradient_filtering(img, verbose)
         img = self.perspective_transform(img, verbose)
-        img, left_fit, right_fit = self.locate_lane_lines(img, verbose)
+        left_fit, right_fit = self.locate_lane_lines(img, verbose)
         return img
 
     def color_and_gradient_filtering(self, img, verbose=False):
@@ -218,4 +218,4 @@ class LineTracker:
             plt.ylim(img.shape[0], 0)
             plt.show()
 
-        return img, left_fit, right_fit
+        return left_fit, right_fit
