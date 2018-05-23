@@ -10,7 +10,8 @@ class LineTracker:
         # Note: img is the undistorted image
         img = self.color_and_gradient_filtering(img, verbose)
         img = self.perspective_transform(img, verbose)
-        left_fit, right_fit = self.locate_lane_lines(img, verbose)
+        left_fit, right_fit, ploty = self.locate_lane_lines(img, verbose)
+        left_curverad, right_curverad = self.measure_curvature(left_fit, right_fit, ploty, verbose)
         return img
 
     def color_and_gradient_filtering(self, img, verbose=False):
@@ -218,4 +219,13 @@ class LineTracker:
             plt.ylim(img.shape[0], 0)
             plt.show()
 
-        return left_fit, right_fit
+        return left_fit, right_fit, ploty
+
+    def measure_curvature(self, left_fit, right_fit, ploty, verbose=False):
+        # Define y-value where we want radius of curvature
+        # I'll choose the maximum y-value, corresponding to the bottom of the image
+        y_eval = np.max(ploty)
+        left_curverad = ((1 + (2 * left_fit[0] * y_eval + left_fit[1]) ** 2) ** 1.5) / np.absolute(2 * left_fit[0])
+        right_curverad = ((1 + (2 * right_fit[0] * y_eval + right_fit[1]) ** 2) ** 1.5) / np.absolute(2 * right_fit[0])
+
+        return left_curverad, right_curverad
