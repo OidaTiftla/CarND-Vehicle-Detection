@@ -46,14 +46,14 @@ class LineTracker:
         combined_binary = np.zeros_like(binary_sobelx)
         combined_binary[(s_binary == 1) | (binary_sobelx == 1)] = 1
 
-        # Plotting thresholded images
-        import matplotlib.pyplot as plt
-        f, (ax1, ax2) = plt.subplots(1, 2, figsize=(20,10))
-        ax1.set_title('Stacked thresholds')
-        ax1.imshow(color_binary)
-        ax2.set_title('Combined S channel and gradient thresholds')
-        ax2.imshow(combined_binary, cmap='gray')
-        plt.show()
+        # # Plotting thresholded images
+        # import matplotlib.pyplot as plt
+        # f, (ax1, ax2) = plt.subplots(1, 2, figsize=(20,10))
+        # ax1.set_title('Stacked thresholds')
+        # ax1.imshow(color_binary)
+        # ax2.set_title('Combined S channel and gradient thresholds')
+        # ax2.imshow(combined_binary, cmap='gray')
+        # plt.show()
 
         # return binary filter
         return combined_binary
@@ -83,13 +83,13 @@ class LineTracker:
              [img_size[0] - int((img_size[0] * (1. - bottom_width * horizontal_offset)) / 2.), img_size[1] - int(img_size[1] * vertical_offset)],
              [int((img_size[0] * (1. - bottom_width * horizontal_offset)) / 2.), img_size[1] - int(img_size[1] * vertical_offset)]])
 
-        # Source image points
-        plt.imshow(img)
-        plt.plot(src[0,0], src[0,1], '.') # top right
-        plt.plot(src[1,0], src[1,1], '.') # bottom right
-        plt.plot(src[2,0], src[2,1], '.') # bottom left
-        plt.plot(src[3,0], src[3,1], '.') # top left
-        plt.show()
+        # # Source image points
+        # plt.imshow(img)
+        # plt.plot(src[0,0], src[0,1], '.') # top right
+        # plt.plot(src[1,0], src[1,1], '.') # bottom right
+        # plt.plot(src[2,0], src[2,1], '.') # bottom left
+        # plt.plot(src[3,0], src[3,1], '.') # top left
+        # plt.show()
 
         # Get perspective transform
         # Compute the perspective transform, M
@@ -99,13 +99,13 @@ class LineTracker:
         # Create warped image - uses linear interpolation
         warped = cv2.warpPerspective(img, M, img_size, flags=cv2.INTER_LINEAR)
 
-        # Visualize undistortion
-        f, (ax1, ax2) = plt.subplots(1, 2, figsize=(20,10))
-        ax1.set_title('Source image')
-        ax1.imshow(img)
-        ax2.set_title('Warped image')
-        ax2.imshow(warped)
-        plt.show()
+        # # Visualize undistortion
+        # f, (ax1, ax2) = plt.subplots(1, 2, figsize=(20,10))
+        # ax1.set_title('Source image')
+        # ax1.imshow(img)
+        # ax2.set_title('Warped image')
+        # ax2.imshow(warped)
+        # plt.show()
 
         # return warped
         return warped
