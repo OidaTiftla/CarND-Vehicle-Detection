@@ -13,12 +13,10 @@ import numpy as np
 import cv2
 import matplotlib.pyplot as plt
 
-def detect_lane_lines(img):
-    img = cam.undistort(img)
-    return img
-
 def process_image(img):
-    img = detect_lane_lines(img)
+    global line_tracker
+    img = cam.undistort(img)
+    img = line_tracker.process(img)
     img = helper.ensure_color(img)
     # NOTE: The output you return should be a color image (3 channel) for processing video below
     return img
@@ -43,6 +41,9 @@ def process_video(fname):
 
 import os
 import helper
+from line_tracker import LineTracker
+
+line_tracker = None
 
 for fname in args.input:
     ext = os.path.splitext(fname)[-1]
@@ -50,6 +51,7 @@ for fname in args.input:
         # Read image
         print("Read image:", fname)
         img = helper.read_img(fname)
+        line_tracker = LineTracker()
         img = process_image(img)
         helper.write_img(img, 'output/' + os.path.basename(fname))
         if args.verbose:
@@ -57,6 +59,7 @@ for fname in args.input:
             plt.show()
     elif ext in ['.mp4']:
         # Read video
+        line_tracker = LineTracker()
         process_video(fname)
     else:
         print("Unknown file extension:", fname)
