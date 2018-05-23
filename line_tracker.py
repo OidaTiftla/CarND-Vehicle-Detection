@@ -8,12 +8,13 @@ class LineTracker:
 
     def process(self, img, verbose=False):
         # Note: img is the undistorted image
-        img = self.color_and_gradient_filtering(img, verbose)
-        img = self.perspective_transform(img, verbose)
-        left_fit, right_fit, ploty = self.locate_lane_lines(img, verbose)
+        img_processed = self.color_and_gradient_filtering(img, verbose)
+        img_processed, M, Minv = self.perspective_transform(img_processed, verbose)
+        left_fit, right_fit, ploty = self.locate_lane_lines(img_processed, verbose)
         left_curverad, right_curverad = self.measure_curvature(left_fit, right_fit, ploty, verbose)
         middlex_img = img.shape[1] / 2
         offset = self.measure_position_offset_from_middle(left_fit, right_fit, ploty, middlex_img, verbose)
+        img = self.visualize(img, M, Minv, left_fit, right_fit, ploty, left_curverad, right_curverad, offset, verbose)
         return img
 
     def color_and_gradient_filtering(self, img, verbose=False):
@@ -116,7 +117,7 @@ class LineTracker:
             plt.show()
 
         # return warped
-        return warped
+        return warped, M, Minv
 
     def locate_lane_lines(self, img, verbose=False):
         # Assuming the imput image is a warped binary image
@@ -242,3 +243,29 @@ class LineTracker:
         offset = middlex - middlex_img
 
         return offset
+
+    def visualize(self, img, M, Minv, left_fit, right_fit, ploty, left_curverad, right_curverad, offset, verbose=False):
+        # Create an image to draw the lines on
+        warp_zero = np.zeros_like(img[:,:,0]).astype(np.uint8)
+        color_warp = helper.ensure_color(warp_zero)
+
+        # Recast the x and y points into usable format for cv2.fillPoly()
+        left_fitx = left_fit[0] * ploty ** 2 + left_fit[1] * ploty + left_fit[2]
+        right_fitx = right_fit[0] * ploty ** 2 + right_fit[1] * ploty + right_fit[2]
+        pts_left = np.array([np.transpose(np.vstack([left_fitx, ploty]))])
+        pts_right = np.array([np.flipud(np.transpose(np.vstack([right_fitx, ploty])))])
+        pts = np.hstack((pts_left, pts_right))
+
+        # Draw the lane onto the warped blank image
+        cv2.fillPoly(color_warp, np.int_([pts]), (0, 255, 0))
+
+        # Warp the blank back to original image space using inverse perspective matrix (Minv)
+        newwarp = cv2.warpPerspective(color_warp, Minv, (img.shape[1], img.shape[0]))
+        # Combine the result with the original image
+        img = cv2.addWeighted(img, 1, newwarp, 0.3, 0)
+
+        # add some infos
+        cv2.putText(img, "Curvature: {:.2f}".format((left_curverad + right_curverad) / 2), (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 255), 2)
+        cv2.putText(img, "Offset: {:.2f}".format(offset), (50, 90), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 255), 2)
+
+        return img
