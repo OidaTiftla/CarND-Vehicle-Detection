@@ -1,21 +1,53 @@
 import numpy as np
 import cv2
+import math
 import helper
+
+# Define a class to receive the characteristics of each line detection
+class Line():
+    def __init__(self):
+        # was the line detected in the last iteration?
+        self.detected = False
+        # x values of the last n fits of the line
+        self.recent_xfitted = []
+        # average x values of the fitted line over the last n iterations
+        self.bestx = None
+        # polynomial coefficients of the last n fits of the line
+        self.recent_fitted = []
+        # polynomial coefficients averaged over the last n iterations
+        self.best_fit = None
+        # polynomial coefficients for the most recent fit
+        self.current_fit = [np.array([False])]
+        # radius of curvature of the line in some units
+        self.radius_of_curvature = None
+        # distance in meters of vehicle center from the line
+        self.line_base_pos = None
+        # # difference in fit coefficients between last and new fits
+        # self.diffs = np.array([0,0,0], dtype='float')
+        # # x values for detected line pixels
+        # self.allx = None
+        # # y values for detected line pixels
+        # self.ally = None
 
 class LineTracker:
     def __init__(self):
-        self.left_fit = None
-        self.right_fit = None
+        self.left_line = Line()
+        self.right_line = Line()
 
     def process(self, img, verbose=0):
         # Note: img is the undistorted image
         img_processed = self.color_and_gradient_filtering(img, verbose)
         img_processed, M, Minv = self.perspective_transform(img_processed, verbose)
-        left_fit, right_fit, ploty = self.locate_lane_lines(img_processed, verbose)
-        left_curverad, right_curverad = self.measure_curvature(left_fit, right_fit, ploty, verbose)
-        middlex_img = img.shape[1] / 2
-        offset = self.measure_position_offset_from_middle(left_fit, right_fit, ploty, middlex_img, verbose)
-        img = self.visualize(img, M, Minv, left_fit, right_fit, ploty, left_curverad, right_curverad, offset, verbose)
+        left_fit, right_fit, left_fitx, right_fitx, ploty = self.locate_lane_lines(img_processed, verbose)
+        middlex_car = img.shape[1] / 2
+        # Define conversions in x and y from pixels space to meters
+        ym_per_pix = 3. / 100 # meters per pixel in y dimension
+        xm_per_pix = 3.7 / 470 # meters per pixel in x dimension
+        left_fit_scaled, right_fit_scaled, ploty_scaled, middlex_car_scaled = self.scale(left_fit, right_fit, ploty, middlex_car, mx=xm_per_pix, my=ym_per_pix)
+        left_radius_of_curvature, right_radius_of_curvature = self.measure_curvature(left_fit_scaled, right_fit_scaled, ploty_scaled)
+        offset, width, left_dir, right_dir = self.measure_lane_parameters(left_fit_scaled, right_fit_scaled, ploty_scaled, middlex_car_scaled, verbose)
+        self.sanity_check(left_fit, right_fit, left_fit_scaled, right_fit_scaled, left_fitx, right_fitx, ploty, left_radius_of_curvature, right_radius_of_curvature, offset, width, left_dir, right_dir)
+        img = self.visualize(img, M, Minv, left_fit, right_fit, ploty, left_radius_of_curvature, right_radius_of_curvature, offset, width, verbose)
         return img
 
     def color_and_gradient_filtering(self, img, verbose=0):
@@ -121,13 +153,13 @@ class LineTracker:
         return warped, M, Minv
 
     def locate_lane_lines(self, img, verbose=0):
-        if self.left_fit == None or self.right_fit == None:
-            self.left_fit, self.right_fit, ploty = self.locate_lane_lines_histogram_search(img, verbose)
+        if self.left_line.detected == False or self.right_line.detected == False:
+            left_fit, right_fit, left_fitx, right_fitx, ploty = self.locate_lane_lines_histogram_search(img, verbose)
         else:
             # Skip the sliding windows step once you know where the lines are
-            self.left_fit, self.right_fit, ploty = self.locate_lane_lines_based_on_last_search(img, self.left_fit, self.right_fit, verbose)
+            left_fit, right_fit, left_fitx, right_fitx, ploty = self.locate_lane_lines_based_on_last_search(img, self.left_line.best_fit, self.right_line.best_fit, verbose)
 
-        return self.left_fit, self.right_fit, ploty
+        return left_fit, right_fit, left_fitx, right_fitx, ploty
 
     def locate_lane_lines_histogram_search(self, img, verbose=0):
         # Assuming the imput image is a warped binary image
@@ -217,11 +249,11 @@ class LineTracker:
         right_fit = np.polyfit(righty, rightx, 2)
 
         ploty = np.linspace(0, img.shape[0] - 1, img.shape[0])
+        # Generate x and y values for plotting
+        left_fitx = left_fit[0] * ploty ** 2 + left_fit[1] * ploty + left_fit[2]
+        right_fitx = right_fit[0] * ploty ** 2 + right_fit[1] * ploty + right_fit[2]
         if verbose >= 3:
-            # Generate x and y values for plotting
             import matplotlib.pyplot as plt
-            left_fitx = left_fit[0] * ploty ** 2 + left_fit[1] * ploty + left_fit[2]
-            right_fitx = right_fit[0] * ploty ** 2 + right_fit[1] * ploty + right_fit[2]
 
             out_img[nonzeroy[left_lane_inds], nonzerox[left_lane_inds]] = [255, 0, 0]
             out_img[nonzeroy[right_lane_inds], nonzerox[right_lane_inds]] = [0, 0, 255]
@@ -232,7 +264,7 @@ class LineTracker:
             plt.ylim(img.shape[0], 0)
             plt.show()
 
-        return left_fit, right_fit, ploty
+        return left_fit, right_fit, left_fitx, right_fitx, ploty
 
     def locate_lane_lines_based_on_last_search(self, img, left_fit, right_fit, verbose=0):
         # Now you know where the lines are you have a fit! In the next frame of video you don't need to do a blind search again, but instead you can just search in a margin around the previous line position like this:
@@ -262,11 +294,11 @@ class LineTracker:
         right_fit = np.polyfit(righty, rightx, 2)
 
         ploty = np.linspace(0, img.shape[0] - 1, img.shape[0])
+        # Generate x and y values for plotting
+        left_fitx = left_fit[0] * ploty ** 2 + left_fit[1] * ploty + left_fit[2]
+        right_fitx = right_fit[0] * ploty ** 2 + right_fit[1] * ploty + right_fit[2]
         if verbose >= 3:
-            # Generate x and y values for plotting
             import matplotlib.pyplot as plt
-            left_fitx = left_fit[0] * ploty ** 2 + left_fit[1] * ploty + left_fit[2]
-            right_fitx = right_fit[0] * ploty ** 2 + right_fit[1] * ploty + right_fit[2]
 
             # Create an image to draw on and an image to show the selection window
             out_img = helper.ensure_color(img * 255)
@@ -295,9 +327,17 @@ class LineTracker:
             plt.ylim(img.shape[0], 0)
             plt.show()
 
-        return left_fit, right_fit, ploty
+        return left_fit, right_fit, left_fitx, right_fitx, ploty
 
-    def measure_curvature(self, left_fit, right_fit, ploty, verbose=0):
+    def scale(self, left_fit, right_fit, ploty, middlex_car, mx, my):
+        scaling = [mx / (my ** 2), (mx / my), mx]
+        left_fit_scaled = left_fit * scaling
+        right_fit_scaled = right_fit * scaling
+        ploty_scaled = ploty * my
+        middlex_car_scaled = middlex_car * mx
+        return left_fit_scaled, right_fit_scaled, ploty_scaled, middlex_car_scaled
+
+    def measure_curvature(self, left_fit, right_fit, ploty):
         # Define y-value where we want radius of curvature
         # I'll choose the maximum y-value, corresponding to the bottom of the image
         y_eval = np.max(ploty)
@@ -306,18 +346,83 @@ class LineTracker:
 
         return left_curverad, right_curverad
 
-    def measure_position_offset_from_middle(self, left_fit, right_fit, ploty, middlex_img, verbose=0):
+    def measure_lane_parameters(self, left_fit, right_fit, ploty, middlex_car, verbose=0):
         # Define y-value where we want radius of curvature
         # I'll choose the maximum y-value, corresponding to the bottom of the image
         y_eval = np.max(ploty)
         leftx = left_fit[0] * y_eval ** 2 + left_fit[1] * y_eval + left_fit[2]
         rightx = right_fit[0] * y_eval ** 2 + right_fit[1] * y_eval + right_fit[2]
         middlex = (leftx + rightx) / 2
-        offset = middlex - middlex_img
+        offset = middlex - middlex_car
+        width = abs(rightx - leftx)
 
-        return offset
+        # direction of line
+        left_slope = 2 * left_fit[0] * y_eval + left_fit[1]
+        right_slope = 2 * right_fit[0] * y_eval + right_fit[1]
+        left_dir = math.atan(left_slope)
+        right_dir = math.atan(right_slope)
 
-    def visualize(self, img, M, Minv, left_fit, right_fit, ploty, left_curverad, right_curverad, offset, verbose=0):
+        return offset, width, left_dir, right_dir
+
+    def sanity_check(self, left_fit, right_fit, left_fit_scaled, right_fit_scaled, left_fitx, right_fitx, ploty, left_radius_of_curvature, right_radius_of_curvature, offset, width, left_dir, right_dir):
+        all_checks_passed = True
+
+        # Checking that they have similar curvature
+        left_steering_angle = math.asin(1 / left_radius_of_curvature)
+        right_steering_angle = math.asin(1 / right_radius_of_curvature)
+        max_diff_degree = 5
+        max_diff_rad = max_diff_degree / 180. * math.pi
+        if abs(left_steering_angle - right_steering_angle) > max_diff_rad:
+            print("steering angle difference to large")
+            all_checks_passed = False
+
+        # Checking that they are separated by approximately the right distance horizontally
+        if width >  4.7 or width < 3.15:
+            print("lane width not matched:", width)
+            all_checks_passed = False
+
+        # Checking that they are roughly parallel
+        max_diff_degree = 15
+        max_diff_rad = max_diff_degree / 180. * math.pi
+        if abs(left_dir - right_dir) > max_diff_rad:
+            print("direction of the two lines do not match")
+            all_checks_passed = False
+
+        self.left_line.detected = all_checks_passed
+        self.right_line.detected = all_checks_passed
+        if all_checks_passed:
+            # lane is detected
+            max_history = 5
+            self.left_line.recent_xfitted.append(left_fitx)
+            self.right_line.recent_xfitted.append(right_fitx)
+            if len(self.left_line.recent_xfitted) > max_history:
+                self.left_line.recent_xfitted.pop(0)
+            if len(self.right_line.recent_xfitted) > max_history:
+                self.right_line.recent_xfitted.pop(0)
+
+            self.left_line.bestx = np.average(np.array(self.left_line.recent_xfitted), axis=0)
+            self.right_line.bestx = np.average(np.array(self.right_line.recent_xfitted), axis=0)
+
+            self.left_line.recent_fitted.append(left_fit)
+            self.right_line.recent_fitted.append(right_fit)
+            if len(self.left_line.recent_fitted) > max_history:
+                self.left_line.recent_fitted.pop(0)
+            if len(self.right_line.recent_fitted) > max_history:
+                self.right_line.recent_fitted.pop(0)
+
+            self.left_line.best_fit = np.average(np.array(self.left_line.recent_fitted), axis=0)
+            self.right_line.best_fit = np.average(np.array(self.right_line.recent_fitted), axis=0)
+
+            self.left_line.current_fit = left_fit
+            self.right_line.current_fit = right_fit
+
+            self.left_line.radius_of_curvature = left_radius_of_curvature
+            self.right_line.radius_of_curvature = right_radius_of_curvature
+
+            self.left_line.line_base_pos = width / 2. - offset
+            self.right_line.line_base_pos = width / 2. + offset
+
+    def visualize(self, img, M, Minv, left_fit, right_fit, ploty, left_curverad, right_curverad, offset, width, verbose=0):
         # Create an image to draw the lines on
         warp_zero = np.zeros_like(img[:,:,0]).astype(np.uint8)
         color_warp = helper.ensure_color(warp_zero)
@@ -340,6 +445,7 @@ class LineTracker:
         if verbose >= 1:
             # add some infos
             cv2.putText(img, "Curvature: {:.2f}".format((left_curverad + right_curverad) / 2), (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 255), 2)
-            cv2.putText(img, "Offset: {:.2f}".format(offset), (50, 90), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 255), 2)
+            cv2.putText(img, "Offset: {:.2f}".format(offset), (50, 95), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 255), 2)
+            cv2.putText(img, "Width: {:.2f}".format(width), (50, 140), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 255), 2)
 
         return img
