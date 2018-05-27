@@ -43,7 +43,8 @@ class LineTracker:
         # Note: img is the undistorted image
         img_processed = self.color_and_gradient_filtering(img, verbose)
         img_processed = self.perspective_transform(img_processed, self.M, self.Minv, verbose)
-        left_fit, right_fit, left_fitx, right_fitx, ploty = self.locate_lane_lines(img_processed, verbose)
+        ploty = np.linspace(0, img.shape[0] - 1, img.shape[0])
+        left_fit, right_fit, left_fitx, right_fitx = self.locate_lane_lines(img_processed, ploty, verbose)
         middlex_car = img.shape[1] / 2
         # Define conversions in x and y from pixels space to meters
         ym_per_pix = 3. / 100 # meters per pixel in y dimension
@@ -160,16 +161,16 @@ class LineTracker:
         # return warped
         return warped
 
-    def locate_lane_lines(self, img, verbose=0):
+    def locate_lane_lines(self, img, ploty, verbose=0):
         if self.left_line.detected == False or self.right_line.detected == False:
-            left_fit, right_fit, left_fitx, right_fitx, ploty = self.locate_lane_lines_histogram_search(img, verbose)
+            left_fit, right_fit, left_fitx, right_fitx = self.locate_lane_lines_histogram_search(img, ploty, verbose)
         else:
             # Skip the sliding windows step once you know where the lines are
-            left_fit, right_fit, left_fitx, right_fitx, ploty = self.locate_lane_lines_based_on_last_search(img, self.left_line.best_fit, self.right_line.best_fit, verbose)
+            left_fit, right_fit, left_fitx, right_fitx = self.locate_lane_lines_based_on_last_search(img, ploty, self.left_line.best_fit, self.right_line.best_fit, verbose)
 
-        return left_fit, right_fit, left_fitx, right_fitx, ploty
+        return left_fit, right_fit, left_fitx, right_fitx
 
-    def locate_lane_lines_histogram_search(self, img, verbose=0):
+    def locate_lane_lines_histogram_search(self, img, ploty, verbose=0):
         # Assuming the imput image is a warped binary image
         # Take a histogram of the bottom half of the image
         histogram = np.sum(img[img.shape[0]//2:,:], axis=0)
@@ -256,7 +257,6 @@ class LineTracker:
         left_fit = np.polyfit(lefty, leftx, 2)
         right_fit = np.polyfit(righty, rightx, 2)
 
-        ploty = np.linspace(0, img.shape[0] - 1, img.shape[0])
         # Generate x and y values for plotting
         left_fitx = left_fit[0] * ploty ** 2 + left_fit[1] * ploty + left_fit[2]
         right_fitx = right_fit[0] * ploty ** 2 + right_fit[1] * ploty + right_fit[2]
@@ -272,9 +272,9 @@ class LineTracker:
             plt.ylim(img.shape[0], 0)
             plt.show()
 
-        return left_fit, right_fit, left_fitx, right_fitx, ploty
+        return left_fit, right_fit, left_fitx, right_fitx
 
-    def locate_lane_lines_based_on_last_search(self, img, left_fit, right_fit, verbose=0):
+    def locate_lane_lines_based_on_last_search(self, img, ploty, left_fit, right_fit, verbose=0):
         # Now you know where the lines are you have a fit! In the next frame of video you don't need to do a blind search again, but instead you can just search in a margin around the previous line position like this:
 
         # Assume you now have a new warped binary image
@@ -301,7 +301,6 @@ class LineTracker:
         left_fit = np.polyfit(lefty, leftx, 2)
         right_fit = np.polyfit(righty, rightx, 2)
 
-        ploty = np.linspace(0, img.shape[0] - 1, img.shape[0])
         # Generate x and y values for plotting
         left_fitx = left_fit[0] * ploty ** 2 + left_fit[1] * ploty + left_fit[2]
         right_fitx = right_fit[0] * ploty ** 2 + right_fit[1] * ploty + right_fit[2]
@@ -335,7 +334,7 @@ class LineTracker:
             plt.ylim(img.shape[0], 0)
             plt.show()
 
-        return left_fit, right_fit, left_fitx, right_fitx, ploty
+        return left_fit, right_fit, left_fitx, right_fitx
 
     def scale(self, left_fit, right_fit, ploty, middlex_car, mx, my):
         scaling = [mx / (my ** 2), (mx / my), mx]
