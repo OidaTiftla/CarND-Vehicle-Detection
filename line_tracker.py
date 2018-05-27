@@ -33,11 +33,16 @@ class LineTracker:
     def __init__(self):
         self.left_line = Line()
         self.right_line = Line()
+        self.M = None
+        self.Minv = None
 
     def process(self, img, verbose=0):
+        img_size = (img.shape[1], img.shape[0])
+        if self.M == None or self.Minv == None:
+            self.M, self.Minv = self.get_perspective_transform_parameters(img_size, verbose=verbose, img=img)
         # Note: img is the undistorted image
         img_processed = self.color_and_gradient_filtering(img, verbose)
-        img_processed, M, Minv = self.perspective_transform(img_processed, verbose)
+        img_processed = self.perspective_transform(img_processed, self.M, self.Minv, verbose)
         left_fit, right_fit, left_fitx, right_fitx, ploty = self.locate_lane_lines(img_processed, verbose)
         middlex_car = img.shape[1] / 2
         # Define conversions in x and y from pixels space to meters
@@ -47,7 +52,7 @@ class LineTracker:
         left_radius_of_curvature, right_radius_of_curvature = self.measure_curvature(left_fit_scaled, right_fit_scaled, ploty_scaled)
         offset, width, left_dir, right_dir = self.measure_lane_parameters(left_fit_scaled, right_fit_scaled, ploty_scaled, middlex_car_scaled, verbose)
         self.sanity_check(left_fit, right_fit, left_fit_scaled, right_fit_scaled, left_fitx, right_fitx, ploty, left_radius_of_curvature, right_radius_of_curvature, offset, width, left_dir, right_dir)
-        img = self.visualize(img, M, Minv, left_fit, right_fit, ploty, left_radius_of_curvature, right_radius_of_curvature, offset, width, verbose)
+        img = self.visualize(img, self.M, self.Minv, left_fit, right_fit, ploty, left_radius_of_curvature, right_radius_of_curvature, offset, width, verbose)
         return img
 
     def color_and_gradient_filtering(self, img, verbose=0):
@@ -98,9 +103,7 @@ class LineTracker:
         # return binary filter
         return combined_binary
 
-    def perspective_transform(self, img, verbose=0):
-        img_size = (img.shape[1], img.shape[0])
-
+    def get_perspective_transform_parameters(self, size, verbose=0, img=None):
         # Define calibration box in source (original) and destination (desired or warped) coordinates
         bottom_width = 0.6
         top_width = 0.075
@@ -108,18 +111,18 @@ class LineTracker:
         bottom = 0.95
         # Four source coordinates
         src = np.float32(
-            [[int((img_size[0] * (1. - bottom_width)) / 2.), int(img_size[1] * bottom)],
-             [img_size[0] - int((img_size[0] * (1. - bottom_width)) / 2.), int(img_size[1] * bottom)],
-             [img_size[0] - int((img_size[0] * (1. - top_width)) / 2.), int(img_size[1] * top)],
-             [int((img_size[0] * (1. - top_width)) / 2.), int(img_size[1] * top)]])
+            [[int((size[0] * (1. - bottom_width)) / 2.), int(size[1] * bottom)],
+             [size[0] - int((size[0] * (1. - bottom_width)) / 2.), int(size[1] * bottom)],
+             [size[0] - int((size[0] * (1. - top_width)) / 2.), int(size[1] * top)],
+             [int((size[0] * (1. - top_width)) / 2.), int(size[1] * top)]])
         # Four desired coordinates
         vertical_offset = 0.98
         horizontal_offset = 0.6
         dst = np.float32(
-            [[int((img_size[0] * (1. - bottom_width * horizontal_offset)) / 2.), int(img_size[1] * vertical_offset)],
-             [img_size[0] - int((img_size[0] * (1. - bottom_width * horizontal_offset)) / 2.), int(img_size[1] * vertical_offset)],
-             [img_size[0] - int((img_size[0] * (1. - bottom_width * horizontal_offset)) / 2.), img_size[1] - int(img_size[1] * vertical_offset)],
-             [int((img_size[0] * (1. - bottom_width * horizontal_offset)) / 2.), img_size[1] - int(img_size[1] * vertical_offset)]])
+            [[int((size[0] * (1. - bottom_width * horizontal_offset)) / 2.), int(size[1] * vertical_offset)],
+             [size[0] - int((size[0] * (1. - bottom_width * horizontal_offset)) / 2.), int(size[1] * vertical_offset)],
+             [size[0] - int((size[0] * (1. - bottom_width * horizontal_offset)) / 2.), size[1] - int(size[1] * vertical_offset)],
+             [int((size[0] * (1. - bottom_width * horizontal_offset)) / 2.), size[1] - int(size[1] * vertical_offset)]])
 
         if verbose >= 4:
             # Source image points
@@ -136,6 +139,11 @@ class LineTracker:
         M = cv2.getPerspectiveTransform(src, dst)
         # Could compute the inverse also by swapping the input parameters
         Minv = cv2.getPerspectiveTransform(dst, src)
+
+        return M, Minv
+
+    def perspective_transform(self, img, M, Minv, verbose=0):
+        img_size = (img.shape[1], img.shape[0])
         # Create warped image - uses linear interpolation
         warped = cv2.warpPerspective(img, M, img_size, flags=cv2.INTER_LINEAR)
 
@@ -150,7 +158,7 @@ class LineTracker:
             plt.show()
 
         # return warped
-        return warped, M, Minv
+        return warped
 
     def locate_lane_lines(self, img, verbose=0):
         if self.left_line.detected == False or self.right_line.detected == False:
