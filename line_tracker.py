@@ -432,7 +432,10 @@ class LineTracker:
             return False
 
         # Checking that they are separated by approximately the right distance horizontally
-        passed = (width <=  4.7) & (width >= 3.15)
+        max_diff_width = 0.4
+        diffs_from_one_to_the_next = abs(np.roll(width, -1) - width)
+        diffs_from_one_to_the_next[-1] = 0 # this diff is between the last and the first element (it's not worth considering)
+        passed = (width[0] <=  4.7) & (width[0] >= 3.15) & (diffs_from_one_to_the_next <= max_diff_width)
         if False in passed:
             print("lane width not matched:", width)
             return False
