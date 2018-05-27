@@ -50,10 +50,36 @@ class LineTracker:
         ym_per_pix = 3. / 100 # meters per pixel in y dimension
         xm_per_pix = 3.7 / 470 # meters per pixel in x dimension
         left_fit_scaled, right_fit_scaled, ploty_scaled, middlex_car_scaled = self.scale(left_fit, right_fit, ploty, middlex_car, mx=xm_per_pix, my=ym_per_pix)
-        left_radius_of_curvature, right_radius_of_curvature = self.measure_curvature(left_fit_scaled, right_fit_scaled, ploty_scaled)
-        offset, width, left_dir, right_dir = self.measure_lane_parameters(left_fit_scaled, right_fit_scaled, ploty_scaled, middlex_car_scaled, verbose)
-        self.sanity_check(left_fit, right_fit, left_fit_scaled, right_fit_scaled, left_fitx, right_fitx, ploty, left_radius_of_curvature, right_radius_of_curvature, offset, width, left_dir, right_dir)
-        img = self.visualize(img, self.M, self.Minv, left_fit, right_fit, ploty, left_radius_of_curvature, right_radius_of_curvature, offset, width, verbose)
+
+        checks = 5
+        checksy = np.linspace(np.max(ploty_scaled), np.min(ploty_scaled), checks)
+        left_radius_of_curvature = []
+        right_radius_of_curvature = []
+        offset = []
+        width = []
+        left_dir = []
+        right_dir = []
+        for checky in checksy:
+            left_roc, right_roc = self.measure_curvature(left_fit_scaled, right_fit_scaled, checky)
+            left_radius_of_curvature.append(left_roc)
+            right_radius_of_curvature.append(right_roc)
+            o, w, left_d, right_d = self.measure_lane_parameters(left_fit_scaled, right_fit_scaled, middlex_car_scaled, checky, verbose)
+            offset.append(o)
+            width.append(w)
+            left_dir.append(left_d)
+            right_dir.append(right_d)
+        left_radius_of_curvature = np.array(left_radius_of_curvature)
+        right_radius_of_curvature = np.array(right_radius_of_curvature)
+        offset = offset[0] # only the offset at the position of the car is relevant
+        width = np.array(width)
+        left_dir = np.array(left_dir)
+        right_dir = np.array(right_dir)
+        detected = self.sanity_check(left_radius_of_curvature, right_radius_of_curvature, width, left_dir, right_dir)
+        self.handle_current_fit(detected, left_fit, right_fit, left_fitx, right_fitx, left_radius_of_curvature[0], right_radius_of_curvature[0], offset, width[0])
+        # recalculate this to parameters, because the sanity check may discards the current frame
+        width = self.left_line.line_base_pos + self.right_line.line_base_pos
+        offset = self.left_line.line_base_pos - (width / 2)
+        img = self.visualize(img, self.M, self.Minv, self.left_line.best_fit, self.right_line.best_fit, ploty, self.left_line.radius_of_curvature, self.right_line.radius_of_curvature, offset, width, verbose)
         return img
 
     def color_and_gradient_filtering(self, img, verbose=0):
@@ -344,19 +370,19 @@ class LineTracker:
         middlex_car_scaled = middlex_car * mx
         return left_fit_scaled, right_fit_scaled, ploty_scaled, middlex_car_scaled
 
-    def measure_curvature(self, left_fit, right_fit, ploty):
+    def measure_curvature(self, left_fit, right_fit, y):
         # Define y-value where we want radius of curvature
         # I'll choose the maximum y-value, corresponding to the bottom of the image
-        y_eval = np.max(ploty)
+        y_eval = y
         left_curverad = ((1 + (2 * left_fit[0] * y_eval + left_fit[1]) ** 2) ** 1.5) / np.absolute(2 * left_fit[0])
         right_curverad = ((1 + (2 * right_fit[0] * y_eval + right_fit[1]) ** 2) ** 1.5) / np.absolute(2 * right_fit[0])
 
         return left_curverad, right_curverad
 
-    def measure_lane_parameters(self, left_fit, right_fit, ploty, middlex_car, verbose=0):
+    def measure_lane_parameters(self, left_fit, right_fit, middlex_car, y, verbose=0):
         # Define y-value where we want radius of curvature
         # I'll choose the maximum y-value, corresponding to the bottom of the image
-        y_eval = np.max(ploty)
+        y_eval = y
         leftx = left_fit[0] * y_eval ** 2 + left_fit[1] * y_eval + left_fit[2]
         rightx = right_fit[0] * y_eval ** 2 + right_fit[1] * y_eval + right_fit[2]
         middlex = (leftx + rightx) / 2
@@ -371,33 +397,37 @@ class LineTracker:
 
         return offset, width, left_dir, right_dir
 
-    def sanity_check(self, left_fit, right_fit, left_fit_scaled, right_fit_scaled, left_fitx, right_fitx, ploty, left_radius_of_curvature, right_radius_of_curvature, offset, width, left_dir, right_dir):
-        all_checks_passed = True
-
+    def sanity_check(self, left_radius_of_curvature, right_radius_of_curvature, width, left_dir, right_dir):
         # Checking that they have similar curvature
-        left_steering_angle = math.asin(1 / left_radius_of_curvature)
-        right_steering_angle = math.asin(1 / right_radius_of_curvature)
+        left_steering_angle = np.arcsin(1 / left_radius_of_curvature)
+        right_steering_angle = np.arcsin(1 / right_radius_of_curvature)
         max_diff_degree = 5
         max_diff_rad = max_diff_degree / 180. * math.pi
-        if abs(left_steering_angle - right_steering_angle) > max_diff_rad:
+        passed = abs(left_steering_angle - right_steering_angle) <= max_diff_rad
+        if False in passed:
             print("steering angle difference to large")
-            all_checks_passed = False
+            return False
 
         # Checking that they are separated by approximately the right distance horizontally
-        if width >  4.7 or width < 3.15:
+        passed = (width <=  4.7) & (width >= 3.15)
+        if False in passed:
             print("lane width not matched:", width)
-            all_checks_passed = False
+            return False
 
         # Checking that they are roughly parallel
         max_diff_degree = 15
         max_diff_rad = max_diff_degree / 180. * math.pi
-        if abs(left_dir - right_dir) > max_diff_rad:
+        passed = abs(left_dir - right_dir) <= max_diff_rad
+        if False in passed:
             print("direction of the two lines do not match")
-            all_checks_passed = False
+            return False
 
-        self.left_line.detected = all_checks_passed
-        self.right_line.detected = all_checks_passed
-        if all_checks_passed:
+        return True
+
+    def handle_current_fit(self, detected, left_fit, right_fit, left_fitx, right_fitx, left_radius_of_curvature, right_radius_of_curvature, offset, width):
+        self.left_line.detected = detected
+        self.right_line.detected = detected
+        if detected:
             # lane is detected
             max_history = 5
             self.left_line.recent_xfitted.append(left_fitx)
