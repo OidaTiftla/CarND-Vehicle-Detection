@@ -503,6 +503,18 @@ class LineTracker:
         # Draw the lane onto the warped blank image
         cv2.fillPoly(color_warp, np.int_([pts]), (0, 255, 0))
 
+        middle_fit = (left_fit + right_fit) / 2
+        middle_fitx = middle_fit[0] * ploty ** 2 + middle_fit[1] * ploty + middle_fit[2]
+        # middle_fitx = (left_fitx + right_fitx) / 2
+        middle_left_fitx = middle_fitx - 4
+        middle_right_fitx = middle_fitx + 4
+        pts_middle_left = np.array([np.transpose(np.vstack([middle_left_fitx, ploty]))])
+        pts_middle_right = np.array([np.flipud(np.transpose(np.vstack([middle_right_fitx, ploty])))])
+        pts_middle = np.hstack((pts_middle_left, pts_middle_right))
+
+        # Draw the center of the lane onto the warped blank image
+        cv2.fillPoly(color_warp, np.int_([pts_middle]), (255, 0, 0))
+
         # Warp the blank back to original image space using inverse perspective matrix (Minv)
         newwarp = cv2.warpPerspective(color_warp, Minv, (img.shape[1], img.shape[0]))
         # Combine the result with the original image
