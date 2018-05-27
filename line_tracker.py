@@ -88,8 +88,12 @@ class LineTracker:
 
         # Visualize the result
         # recalculate this to parameters, because the sanity check may discards the current frame
-        width = self.left_line.line_base_pos + self.right_line.line_base_pos
-        offset = self.left_line.line_base_pos - (width / 2)
+        if detected:
+            width = self.left_line.line_base_pos + self.right_line.line_base_pos
+            offset = self.left_line.line_base_pos - (width / 2)
+        else:
+            width = 0
+            offset = 0
         img = self.visualize(img, self.M, self.Minv, self.left_line.best_fit, self.right_line.best_fit, ploty, self.left_line.radius_of_curvature, self.right_line.radius_of_curvature, offset, width, verbose)
 
         return img
@@ -479,6 +483,9 @@ class LineTracker:
             self.right_line.line_base_pos = width / 2. + offset
 
     def visualize(self, img, M, Minv, left_fit, right_fit, ploty, left_curverad, right_curverad, offset, width, verbose=0):
+        if left_fit == None or right_fit == None:
+            return img # not fit yet
+
         # Create an image to draw the lines on
         warp_zero = np.zeros_like(img[:,:,0]).astype(np.uint8)
         color_warp = helper.ensure_color(warp_zero)
