@@ -37,20 +37,31 @@ class LineTracker:
         self.Minv = None
 
     def process(self, img, verbose=0):
+        # get projection matrix once the image size is known
         img_size = (img.shape[1], img.shape[0])
         if self.M == None or self.Minv == None:
             self.M, self.Minv = self.get_perspective_transform_parameters(img_size, verbose=verbose, img=img)
-        # Note: img is the undistorted image
+
+        # Note: img is already the undistorted image
+
+        # Filter
         img_processed = self.color_and_gradient_filtering(img, verbose)
+
+        # Transform
         img_processed = self.perspective_transform(img_processed, self.M, self.Minv, verbose)
+
+        # Locate lane lines
         ploty = np.linspace(0, img.shape[0] - 1, img.shape[0])
         left_fit, right_fit, left_fitx, right_fitx = self.locate_lane_lines(img_processed, ploty, verbose)
         middlex_car = img.shape[1] / 2
+
+        # Scale to meters
         # Define conversions in x and y from pixels space to meters
         ym_per_pix = 3. / 100 # meters per pixel in y dimension
         xm_per_pix = 3.7 / 470 # meters per pixel in x dimension
         left_fit_scaled, right_fit_scaled, ploty_scaled, middlex_car_scaled = self.scale(left_fit, right_fit, ploty, middlex_car, mx=xm_per_pix, my=ym_per_pix)
 
+        # Do a sanity check several times from start of lane to end of lane in the current frame
         checks = 5
         checksy = np.linspace(np.max(ploty_scaled), np.min(ploty_scaled), checks)
         left_radius_of_curvature = []
@@ -60,6 +71,7 @@ class LineTracker:
         left_dir = []
         right_dir = []
         for checky in checksy:
+            # get lane parameters for the current checkpoint in y and add them to the lists
             left_roc, right_roc = self.measure_curvature(left_fit_scaled, right_fit_scaled, checky)
             left_radius_of_curvature.append(left_roc)
             right_radius_of_curvature.append(right_roc)
@@ -68,18 +80,18 @@ class LineTracker:
             width.append(w)
             left_dir.append(left_d)
             right_dir.append(right_d)
-        left_radius_of_curvature = np.array(left_radius_of_curvature)
-        right_radius_of_curvature = np.array(right_radius_of_curvature)
         offset = offset[0] # only the offset at the position of the car is relevant
-        width = np.array(width)
-        left_dir = np.array(left_dir)
-        right_dir = np.array(right_dir)
         detected = self.sanity_check(left_radius_of_curvature, right_radius_of_curvature, width, left_dir, right_dir)
+
+        # Combine the detected fits
         self.handle_current_fit(detected, left_fit, right_fit, left_fitx, right_fitx, left_radius_of_curvature[0], right_radius_of_curvature[0], offset, width[0])
+
+        # Visualize the result
         # recalculate this to parameters, because the sanity check may discards the current frame
         width = self.left_line.line_base_pos + self.right_line.line_base_pos
         offset = self.left_line.line_base_pos - (width / 2)
         img = self.visualize(img, self.M, self.Minv, self.left_line.best_fit, self.right_line.best_fit, ploty, self.left_line.radius_of_curvature, self.right_line.radius_of_curvature, offset, width, verbose)
+
         return img
 
     def color_and_gradient_filtering(self, img, verbose=0):
@@ -398,6 +410,13 @@ class LineTracker:
         return offset, width, left_dir, right_dir
 
     def sanity_check(self, left_radius_of_curvature, right_radius_of_curvature, width, left_dir, right_dir):
+        # convert to numpy array, so that math operations work
+        left_radius_of_curvature = np.array(left_radius_of_curvature)
+        right_radius_of_curvature = np.array(right_radius_of_curvature)
+        width = np.array(width)
+        left_dir = np.array(left_dir)
+        right_dir = np.array(right_dir)
+
         # Checking that they have similar curvature
         left_steering_angle = np.arcsin(1 / left_radius_of_curvature)
         right_steering_angle = np.arcsin(1 / right_radius_of_curvature)
