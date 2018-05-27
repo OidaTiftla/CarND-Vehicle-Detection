@@ -42,7 +42,7 @@ for fname in args.images:
         imgpoints.append(corners)
         objpoints.append(objp)
         if args.verbose:
-            # # draw and display the corners
+            # draw and display the corners
             img = cv2.drawChessboardCorners(img, chessboard_size, corners, ret)
             plt.imshow(img)
             plt.show()
