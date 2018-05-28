@@ -52,39 +52,11 @@ class LineTracker:
 
         # Locate lane lines
         ploty = np.linspace(0, img.shape[0] - 1, img.shape[0])
-        left_fit, right_fit, left_fitx, right_fitx = self.locate_lane_lines(img_processed, ploty, verbose)
-        middlex_car = img.shape[1] / 2
-
-        # Scale to meters
-        # Define conversions in x and y from pixels space to meters
-        ym_per_pix = 3. / 70 # meters per pixel in y dimension
-        xm_per_pix = 3.7 / 470 # meters per pixel in x dimension
-        left_fit_scaled, right_fit_scaled, ploty_scaled, middlex_car_scaled = self.scale(left_fit, right_fit, ploty, middlex_car, mx=xm_per_pix, my=ym_per_pix)
-
-        # Do a sanity check several times from start of lane to end of lane in the current frame
-        checks = 5
-        checksy = np.linspace(np.max(ploty_scaled), np.min(ploty_scaled), checks)
-        left_radius_of_curvature = []
-        right_radius_of_curvature = []
-        offset = []
-        width = []
-        left_dir = []
-        right_dir = []
-        for checky in checksy:
-            # get lane parameters for the current checkpoint in y and add them to the lists
-            left_roc, right_roc = self.measure_curvature(left_fit_scaled, right_fit_scaled, checky)
-            left_radius_of_curvature.append(left_roc)
-            right_radius_of_curvature.append(right_roc)
-            o, w, left_d, right_d = self.measure_lane_parameters(left_fit_scaled, right_fit_scaled, middlex_car_scaled, checky, verbose)
-            offset.append(o)
-            width.append(w)
-            left_dir.append(left_d)
-            right_dir.append(right_d)
-        offset = offset[0] # only the offset at the position of the car is relevant
-        detected = self.sanity_check(left_radius_of_curvature, right_radius_of_curvature, width, left_dir, right_dir)
+        left_fit, right_fit, left_fitx, right_fitx, left_radius_of_curvature, right_radius_of_curvature, offset, width = self.locate_lane_lines(img_processed, ploty, verbose)
+        detected = True
 
         # Combine the detected fits
-        self.handle_current_fit(detected, left_fit, right_fit, left_fitx, right_fitx, left_radius_of_curvature[0], right_radius_of_curvature[0], offset, width[0])
+        self.handle_current_fit(True, left_fit, right_fit, left_fitx, right_fitx, left_radius_of_curvature, right_radius_of_curvature, offset, width)
 
         # Visualize the result
         # recalculate this to parameters, because the sanity check may discards the current frame
@@ -94,7 +66,7 @@ class LineTracker:
         else:
             width = 0
             offset = 0
-        img = self.visualize(img, self.M, self.Minv, self.left_line.best_fit, self.right_line.best_fit, ploty, self.left_line.radius_of_curvature, self.right_line.radius_of_curvature, offset, width, verbose)
+        img = self.visualize(img, self.M, self.Minv, self.left_line.current_fit, self.right_line.current_fit, ploty, self.left_line.radius_of_curvature, self.right_line.radius_of_curvature, offset, width, verbose)
 
         return img
 
@@ -219,13 +191,19 @@ class LineTracker:
         return warped
 
     def locate_lane_lines(self, img, ploty, verbose=0):
-        if self.left_line.detected == False or self.right_line.detected == False:
-            left_fit, right_fit, left_fitx, right_fitx = self.locate_lane_lines_histogram_search(img, ploty, verbose)
-        else:
+        middlex_car = img.shape[1] / 2
+        if self.left_line.detected == True and self.right_line.detected == True:
             # Skip the sliding windows step once you know where the lines are
             left_fit, right_fit, left_fitx, right_fitx = self.locate_lane_lines_based_on_last_search(img, ploty, self.left_line.best_fit, self.right_line.best_fit, verbose)
+            # Sanity checks
+            detected, left_radius_of_curvature, right_radius_of_curvature, offset, width = self.sanity_checks(left_fit, right_fit, ploty, middlex_car, verbose)
+            if detected:
+                return left_fit, right_fit, left_fitx, right_fitx, left_radius_of_curvature, right_radius_of_curvature, offset, width
 
-        return left_fit, right_fit, left_fitx, right_fitx
+        left_fit, right_fit, left_fitx, right_fitx = self.locate_lane_lines_histogram_search(img, ploty, verbose)
+        # Sanity checks
+        detected, left_radius_of_curvature, right_radius_of_curvature, offset, width = self.sanity_checks(left_fit, right_fit, ploty, middlex_car, verbose)
+        return left_fit, right_fit, left_fitx, right_fitx, left_radius_of_curvature, right_radius_of_curvature, offset, width
 
     def locate_lane_lines_histogram_search(self, img, ploty, verbose=0):
         # Assuming the imput image is a warped binary image
@@ -433,6 +411,36 @@ class LineTracker:
         right_dir = math.atan(right_slope)
 
         return offset, width, left_dir, right_dir
+
+    def sanity_checks(self, left_fit, right_fit, ploty, middlex_car, verbose=0):
+        # Scale to meters
+        # Define conversions in x and y from pixels space to meters
+        ym_per_pix = 3. / 70 # meters per pixel in y dimension
+        xm_per_pix = 3.7 / 470 # meters per pixel in x dimension
+        left_fit_scaled, right_fit_scaled, ploty_scaled, middlex_car_scaled = self.scale(left_fit, right_fit, ploty, middlex_car, mx=xm_per_pix, my=ym_per_pix)
+
+        # Do a sanity check several times from start of lane to end of lane in the current frame
+        checks = 5
+        checksy = np.linspace(np.max(ploty_scaled), np.min(ploty_scaled), checks)
+        left_radius_of_curvature = []
+        right_radius_of_curvature = []
+        offset = []
+        width = []
+        left_dir = []
+        right_dir = []
+        for checky in checksy:
+            # get lane parameters for the current checkpoint in y and add them to the lists
+            left_roc, right_roc = self.measure_curvature(left_fit_scaled, right_fit_scaled, checky)
+            left_radius_of_curvature.append(left_roc)
+            right_radius_of_curvature.append(right_roc)
+            o, w, left_d, right_d = self.measure_lane_parameters(left_fit_scaled, right_fit_scaled, middlex_car_scaled, checky, verbose)
+            offset.append(o)
+            width.append(w)
+            left_dir.append(left_d)
+            right_dir.append(right_d)
+        offset = offset[0] # only the offset at the position of the car is relevant
+
+        return self.sanity_check(left_radius_of_curvature, right_radius_of_curvature, width, left_dir, right_dir), left_radius_of_curvature[0], right_radius_of_curvature[0], offset, width[0]
 
     def sanity_check(self, left_radius_of_curvature, right_radius_of_curvature, width, left_dir, right_dir):
         # convert to numpy array, so that math operations work
