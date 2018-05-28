@@ -138,7 +138,7 @@ It also add some information about the current lane (curvature, width and vehicl
 
 #### Provide a link to your final video output.  Your pipeline should perform reasonably well on the entire project video (wobbly lines are ok but no catastrophic failures that would cause the car to drive off the road!).
 
-Here's a [link to my video result](output/project_video_2018-05-28_14-12-34.mp4)
+Here's a [link to my video result](output/project_video_2018-05-28_18-04-12.mp4)
 
 You can rerun the video by executing this line in the shell:
 
