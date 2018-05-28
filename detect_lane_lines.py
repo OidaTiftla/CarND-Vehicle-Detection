@@ -4,6 +4,7 @@ parser.add_argument("-i", "--input", help="the input video (.mp4,.jpg,.png)", na
 parser.add_argument("--calib", help="the calibration file for the camera (.p)", default='camera.p')
 parser.add_argument("-v", "--verbose", help="level of verbosity (specify this option up to 4 times, for the most detailed output)", action='count', default=0)
 parser.add_argument("-o", "--output", help="save output into output directory", action='store_true')
+parser.add_argument("-s", "--samples", help="save each frame from video into test_images directory", action='store_true')
 args = parser.parse_args()
 
 print("Load calibration from:", args.calib)
@@ -25,6 +26,15 @@ def process_image(img):
     # NOTE: The output you return should be a color image (3 channel) for processing video below
     return img
 
+def process_video_frame(get_frame, t):
+    img = get_frame(t)
+    if args.samples:
+        helper.write_img(img, 'test_images/' + os.path.splitext(fname)[0] + '_' + str(t) + '.jpg')
+    img = process_image(img)
+    if args.samples:
+        helper.write_img(img, 'test_images/' + os.path.splitext(fname)[0] + '_' + str(t) + '_result.jpg')
+    return img
+
 def process_video(fname):
     # Import everything needed to edit/save/watch video clips
     from moviepy.editor import VideoFileClip
@@ -40,7 +50,7 @@ def process_video(fname):
     ## You may also uncomment the following line for a subclip of the first 5 seconds
     ##clip = VideoFileClip(fname).subclip(0,5)
     clip = VideoFileClip(fname)
-    clip = clip.fl_image(process_image) #NOTE: this function expects color images!!
+    clip = clip.fl(process_video_frame) #NOTE: this function expects color images!!
     if args.output:
         clip.write_videofile(output_fname, audio=False)
 
