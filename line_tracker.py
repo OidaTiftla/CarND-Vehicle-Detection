@@ -167,21 +167,36 @@ class LineTracker:
              [size[0] - int((size[0] * (1. - bottom_width * horizontal_offset)) / 2.), size[1] - int(size[1] * vertical_offset)],
              [int((size[0] * (1. - bottom_width * horizontal_offset)) / 2.), size[1] - int(size[1] * vertical_offset)]])
 
-        if verbose >= 4:
-            # Source image points
-            import matplotlib.pyplot as plt
-            plt.imshow(img)
-            plt.plot(src[0,0], src[0,1], '.') # top right
-            plt.plot(src[1,0], src[1,1], '.') # bottom right
-            plt.plot(src[2,0], src[2,1], '.') # bottom left
-            plt.plot(src[3,0], src[3,1], '.') # top left
-            plt.show()
-
         # Get perspective transform
         # Compute the perspective transform, M
         M = cv2.getPerspectiveTransform(src, dst)
         # Could compute the inverse also by swapping the input parameters
         Minv = cv2.getPerspectiveTransform(dst, src)
+
+        if verbose >= 4:
+            # Create warped image - uses linear interpolation
+            warped = cv2.warpPerspective(img, M, size, flags=cv2.INTER_LINEAR)
+            # Visualize undistortion
+            import matplotlib.pyplot as plt
+            f, (ax1, ax2) = plt.subplots(1, 2, figsize=(20,10))
+
+            ax1.set_title('Source image')
+            ax1.imshow(img)
+            # Source image points
+            ax1.plot(src[0,0], src[0,1], '.') # top right
+            ax1.plot(src[1,0], src[1,1], '.') # bottom right
+            ax1.plot(src[2,0], src[2,1], '.') # bottom left
+            ax1.plot(src[3,0], src[3,1], '.') # top left
+
+            ax2.set_title('Warped image')
+            ax2.imshow(warped)
+            # Warped image points
+            ax2.plot(dst[0,0], dst[0,1], '.') # top right
+            ax2.plot(dst[1,0], dst[1,1], '.') # bottom right
+            ax2.plot(dst[2,0], dst[2,1], '.') # bottom left
+            ax2.plot(dst[3,0], dst[3,1], '.') # top left
+
+            plt.show()
 
         return M, Minv
 
