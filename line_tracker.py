@@ -234,6 +234,12 @@ class LineTracker:
         if verbose >= 3:
             # Create an output image to draw on and visualize the result
             out_img = helper.ensure_color(img * 255)
+        # discard spots to far away from the center (the car is assumed to drive in the middle of the road)
+        margin = int(histogram.shape[0] * 0.2)
+        left_margin = margin
+        right_margin = histogram.shape[0] - margin
+        histogram[:left_margin] = 0
+        histogram[right_margin:] = 0
         # Find the peak of the left and right halves of the histogram
         # These will be the starting point for the left and right lines
         midpoint = np.int(histogram.shape[0] // 2)
