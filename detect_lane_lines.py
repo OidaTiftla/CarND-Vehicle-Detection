@@ -29,10 +29,10 @@ def process_image(img):
 def process_video_frame(get_frame, t):
     img = get_frame(t)
     if args.samples:
-        helper.write_img(img, 'test_images/' + os.path.splitext(fname)[0] + '_' + str(t) + '.jpg')
+        helper.write_img(img, 'test_images/' + os.path.splitext(fname)[0] + '_' + '{:3.2f}'.format(t) + '.jpg')
     img = process_image(img)
     if args.samples:
-        helper.write_img(img, 'test_images/' + os.path.splitext(fname)[0] + '_' + str(t) + '_result.jpg')
+        helper.write_img(img, 'test_images/' + os.path.splitext(fname)[0] + '_' + '{:3.2f}'.format(t) + '_result.jpg')
     return img
 
 def process_video(fname):
