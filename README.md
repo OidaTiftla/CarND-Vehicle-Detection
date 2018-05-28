@@ -115,12 +115,14 @@ In both functions the lane lines get fit with a 2nd order polynomial kinda like 
 
 #### Calculate the radius of curvature of the lane and the position of the vehicle with respect to center
 
+This is all done during checking the lane for plausibility in the function `sanity_checks(left_fit, right_fit, ploty, middlex_car)`.
+
 First all detected parameters get converted from pixel space into meters.
 This is done in the function called `scale(left_fit, right_fit, ploty, middlex_car, mx, my)`.
 
 Afterwards the lane is splitted vertically into 5 checkpoint lines.
 A sanity check is done for each of those 5 horizontal lines.
-So from line 64 to 83 there are all relevant parameters calculated (including curvature).
+So the function `sanity_checks(left_fit, right_fit, ploty, middlex_car)` calculates all relevant parameters (including curvature).
 All calculated parameters are checked in the function `sanity_check(left_radius_of_curvature, right_radius_of_curvature, width, left_dir, right_dir)`.
 If the check is passed, the lane is considered as detected.
 
