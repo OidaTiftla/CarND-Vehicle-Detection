@@ -57,7 +57,7 @@ class LineTracker:
 
         # Scale to meters
         # Define conversions in x and y from pixels space to meters
-        ym_per_pix = 3. / 100 # meters per pixel in y dimension
+        ym_per_pix = 3. / 70 # meters per pixel in y dimension
         xm_per_pix = 3.7 / 470 # meters per pixel in x dimension
         left_fit_scaled, right_fit_scaled, ploty_scaled, middlex_car_scaled = self.scale(left_fit, right_fit, ploty, middlex_car, mx=xm_per_pix, my=ym_per_pix)
 
@@ -432,7 +432,7 @@ class LineTracker:
             return False
 
         # Checking that they are separated by approximately the right distance horizontally
-        max_diff_width = 0.4
+        max_diff_width = 0.5
         diffs_from_one_to_the_next = abs(np.roll(width, -1) - width)
         diffs_from_one_to_the_next[-1] = 0 # this diff is between the last and the first element (it's not worth considering)
         passed = (width[0] <=  4.7) & (width[0] >= 3.15) & (diffs_from_one_to_the_next <= max_diff_width)
@@ -441,7 +441,7 @@ class LineTracker:
             return False
 
         # Checking that they are roughly parallel
-        max_diff_degree = 15
+        max_diff_degree = 10
         max_diff_rad = max_diff_degree / 180. * math.pi
         passed = abs(left_dir - right_dir) <= max_diff_rad
         if False in passed:
