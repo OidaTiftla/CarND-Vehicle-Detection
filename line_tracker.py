@@ -498,7 +498,7 @@ class LineTracker:
         self.right_line.detected = detected
         if detected:
             # lane is detected
-            max_history = 5
+            max_history = 15
             self.left_line.recent_xfitted.append(left_fitx)
             self.right_line.recent_xfitted.append(right_fitx)
             if len(self.left_line.recent_xfitted) > max_history:
@@ -516,8 +516,9 @@ class LineTracker:
             if len(self.right_line.recent_fitted) > max_history:
                 self.right_line.recent_fitted.pop(0)
 
-            self.left_line.best_fit = np.average(np.array(self.left_line.recent_fitted), axis=0)
-            self.right_line.best_fit = np.average(np.array(self.right_line.recent_fitted), axis=0)
+            weights = np.exp(np.array(range(len(self.left_line.recent_fitted))) / 5.) + 1.
+            self.left_line.best_fit = np.average(np.array(self.left_line.recent_fitted), axis=0, weights=weights)
+            self.right_line.best_fit = np.average(np.array(self.right_line.recent_fitted), axis=0, weights=weights)
 
             self.left_line.current_fit = left_fit
             self.right_line.current_fit = right_fit
