@@ -102,11 +102,6 @@ class LineTracker:
         s_binary = np.zeros_like(s_channel)
         s_binary[(s_channel >= s_thresh_min) & (s_channel <= s_thresh_max)] = 1
 
-        # Stack each channel to view their individual contributions in green and blue respectively
-        # This returns a stack of the two binary images, whose components you can see as different colors
-        color_binary_1 = np.dstack((np.zeros_like(binary_sobelx), binary_sobelx, s_binary)) * 255
-        color_binary_2 = np.dstack((np.zeros_like(binary_sobelx), np.zeros_like(binary_sobelx), l_binary)) * 255
-
         # Combine the two binary thresholds
         combined_binary = np.zeros_like(binary_sobelx)
         combined_binary[((l_binary == 0) & (s_binary == 1)) | (binary_sobelx == 1)] = 1
@@ -114,6 +109,12 @@ class LineTracker:
         if verbose >= 3:
             # Plotting thresholded images
             import matplotlib.pyplot as plt
+
+            # Stack each channel to view their individual contributions in green and blue respectively
+            # This returns a stack of the two binary images, whose components you can see as different colors
+            color_binary_1 = np.dstack((np.zeros_like(binary_sobelx), binary_sobelx, s_binary)) * 255
+            color_binary_2 = np.dstack((np.zeros_like(binary_sobelx), np.zeros_like(binary_sobelx), l_binary)) * 255
+
             f, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(20,10))
             ax1.set_title('Stacked thresholds (sobelx, S)')
             ax1.imshow(color_binary_1)
