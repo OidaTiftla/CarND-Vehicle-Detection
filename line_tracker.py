@@ -444,6 +444,7 @@ class LineTracker:
             right_dir.append(right_d)
         offset = offset[0] # only the offset at the position of the car is relevant
 
+        # Compare with best fit
         if self.left_line.best_fit != None and self.right_line.best_fit != None:
             best_left_radius_of_curvature, best_right_radius_of_curvature = self.measure_curvature(best_left_fit_scaled, best_right_fit_scaled, checksy[0])
             best_offset, best_width, best_left_dir, best_right_dir = self.measure_lane_parameters(best_left_fit_scaled, best_right_fit_scaled, middlex_car_scaled, checksy[0], verbose)
