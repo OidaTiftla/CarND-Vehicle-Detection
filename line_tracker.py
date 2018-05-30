@@ -447,8 +447,8 @@ class LineTracker:
         if self.left_line.best_fit != None and self.right_line.best_fit != None:
             best_left_radius_of_curvature, best_right_radius_of_curvature = self.measure_curvature(best_left_fit_scaled, best_right_fit_scaled, checksy[0])
             best_offset, best_width, best_left_dir, best_right_dir = self.measure_lane_parameters(best_left_fit_scaled, best_right_fit_scaled, middlex_car_scaled, checksy[0], verbose)
-            max_diff_offset_to_best = 0.05
-            max_diff_width_to_best = 0.15
+            max_diff_offset_to_best = 0.15
+            max_diff_width_to_best = 0.2
             if abs(best_offset - offset) > max_diff_offset_to_best \
                 or abs(best_width - width[0]) > max_diff_width_to_best:
                 print("lane position not matched with last best fit: (offset_diff, width_diff)", (abs(best_offset - offset), abs(best_width - width[0])))
