@@ -66,7 +66,7 @@ class LineTracker:
         else:
             width = 0
             offset = 0
-        img = self.visualize(img, self.M, self.Minv, self.left_line.current_fit, self.right_line.current_fit, ploty, self.left_line.radius_of_curvature, self.right_line.radius_of_curvature, offset, width, verbose)
+        img = self.visualize(img, self.M, self.Minv, self.left_line.best_fit, self.right_line.best_fit, ploty, self.left_line.radius_of_curvature, self.right_line.radius_of_curvature, offset, width, verbose)
 
         return img
 
