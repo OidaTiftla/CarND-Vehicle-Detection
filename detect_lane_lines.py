@@ -49,6 +49,10 @@ def process_video(fname):
     ## Where start_second and end_second are integer values representing the start and end of the subclip
     ## You may also uncomment the following line for a subclip of the first 5 seconds
     ##clip = VideoFileClip(fname).subclip(0,5)
+    # project_video.mp4
+    # clip = VideoFileClip(fname).subclip(20, 27)
+    # clip = VideoFileClip(fname).subclip(38, 43)
+    # clip = VideoFileClip(fname).subclip(48.5, None)
     clip = VideoFileClip(fname)
     clip = clip.fl(process_video_frame) #NOTE: this function expects color images!!
     if args.output:
