@@ -418,6 +418,10 @@ class LineTracker:
         ym_per_pix = 3. / 70 # meters per pixel in y dimension
         xm_per_pix = 3.7 / 470 # meters per pixel in x dimension
         left_fit_scaled, right_fit_scaled, ploty_scaled, middlex_car_scaled = self.scale(left_fit, right_fit, ploty, middlex_car, mx=xm_per_pix, my=ym_per_pix)
+        if self.left_line.best_fit != None and self.right_line.best_fit != None:
+            best_left_fit = self.left_line.best_fit
+            best_right_fit = self.right_line.best_fit
+            best_left_fit_scaled, best_right_fit_scaled, ploty_scaled, middlex_car_scaled = self.scale(best_left_fit, best_right_fit, ploty, middlex_car, mx=xm_per_pix, my=ym_per_pix)
 
         # Do a sanity check several times from start of lane to end of lane in the current frame
         checks = 5
@@ -439,6 +443,16 @@ class LineTracker:
             left_dir.append(left_d)
             right_dir.append(right_d)
         offset = offset[0] # only the offset at the position of the car is relevant
+
+        if self.left_line.best_fit != None and self.right_line.best_fit != None:
+            best_left_radius_of_curvature, best_right_radius_of_curvature = self.measure_curvature(best_left_fit_scaled, best_right_fit_scaled, checksy[0])
+            best_offset, best_width, best_left_dir, best_right_dir = self.measure_lane_parameters(best_left_fit_scaled, best_right_fit_scaled, middlex_car_scaled, checksy[0], verbose)
+            max_diff_offset_to_best = 0.05
+            max_diff_width_to_best = 0.15
+            if abs(best_offset - offset) > max_diff_offset_to_best \
+                or abs(best_width - width[0]) > max_diff_width_to_best:
+                print("lane position not matched with last best fit: (offset_diff, width_diff)", (abs(best_offset - offset), abs(best_width - width[0])))
+                return False, left_radius_of_curvature[0], right_radius_of_curvature[0], offset, width[0]
 
         return self.sanity_check(left_radius_of_curvature, right_radius_of_curvature, width, left_dir, right_dir), left_radius_of_curvature[0], right_radius_of_curvature[0], offset, width[0]
 
