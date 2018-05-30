@@ -73,6 +73,7 @@ class LineTracker:
     def color_and_gradient_filtering(self, img, verbose=0):
         # Convert to HLS color space and separate the S channel
         hls = cv2.cvtColor(img, cv2.COLOR_RGB2HLS)
+        l_channel = hls[:,:,1]
         s_channel = hls[:,:,2]
 
         # Grayscale image
@@ -92,27 +93,34 @@ class LineTracker:
         binary_sobelx[(scaled_sobelx >= thresh_min) & (scaled_sobelx <= thresh_max)] = 1
 
         # Threshold color channel
-        s_thresh_min = 170
-        s_thresh_max = 255
+        l_thresh_min = 0
+        l_thresh_max = 80
+        l_binary = np.zeros_like(l_channel)
+        l_binary[(l_channel >= l_thresh_min) & (l_channel <= l_thresh_max)] = 1
+        s_thresh_min = 190
+        s_thresh_max = 235
         s_binary = np.zeros_like(s_channel)
         s_binary[(s_channel >= s_thresh_min) & (s_channel <= s_thresh_max)] = 1
 
         # Stack each channel to view their individual contributions in green and blue respectively
         # This returns a stack of the two binary images, whose components you can see as different colors
-        color_binary = np.dstack(( np.zeros_like(binary_sobelx), binary_sobelx, s_binary)) * 255
+        color_binary_1 = np.dstack((np.zeros_like(binary_sobelx), binary_sobelx, s_binary)) * 255
+        color_binary_2 = np.dstack((np.zeros_like(binary_sobelx), np.zeros_like(binary_sobelx), l_binary)) * 255
 
         # Combine the two binary thresholds
         combined_binary = np.zeros_like(binary_sobelx)
-        combined_binary[(s_binary == 1) | (binary_sobelx == 1)] = 1
+        combined_binary[((l_binary == 0) & (s_binary == 1)) | (binary_sobelx == 1)] = 1
 
         if verbose >= 3:
             # Plotting thresholded images
             import matplotlib.pyplot as plt
-            f, (ax1, ax2) = plt.subplots(1, 2, figsize=(20,10))
-            ax1.set_title('Stacked thresholds')
-            ax1.imshow(color_binary)
-            ax2.set_title('Combined S channel and gradient thresholds')
-            ax2.imshow(combined_binary, cmap='gray')
+            f, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(20,10))
+            ax1.set_title('Stacked thresholds (sobelx, S)')
+            ax1.imshow(color_binary_1)
+            ax2.set_title('Stacked thresholds (L)')
+            ax2.imshow(color_binary_2)
+            ax3.set_title('Combined S channel and gradient thresholds')
+            ax3.imshow(combined_binary, cmap='gray')
             plt.show()
 
         # return binary filter
