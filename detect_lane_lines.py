@@ -2,7 +2,7 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("-i", "--input", help="the input video (.mp4,.jpg,.png)", nargs='+')
 parser.add_argument("--calib", help="the calibration file for the camera (.p)", default='camera.p')
-parser.add_argument("-v", "--verbose", help="level of verbosity (specify this option up to 4 times, for the most detailed output)", action='count', default=0)
+parser.add_argument("-v", "--verbose", help="level of verbosity (specify this option up to 5 times, for the most detailed output)", action='count', default=0)
 parser.add_argument("-o", "--output", help="save output into output directory", action='store_true')
 parser.add_argument("-s", "--samples", help="save each frame from video into test_images directory", action='store_true')
 args = parser.parse_args()
@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 def process_image(img):
     global line_tracker
     img = cam.undistort(img)
-    if args.verbose >= 4:
+    if args.verbose >= 5:
         plt.imshow(img)
         plt.show()
     img = line_tracker.process(img, args.verbose)
@@ -74,7 +74,7 @@ for fname in args.input:
         img = process_image(img)
         if args.output:
             helper.write_img(img, 'output/' + os.path.basename(fname))
-        if args.verbose >= 2:
+        if args.verbose >= 3:
             plt.imshow(img)
             plt.show()
     elif ext in ['.mp4']:

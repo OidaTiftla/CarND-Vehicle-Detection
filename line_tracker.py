@@ -52,7 +52,7 @@ class LineTracker:
 
         # Locate lane lines
         ploty = np.linspace(0, img.shape[0] - 1, img.shape[0])
-        left_fit, right_fit, left_fitx, right_fitx, left_radius_of_curvature, right_radius_of_curvature, offset, width = self.locate_lane_lines(img_processed, ploty, verbose)
+        left_fit, right_fit, left_fitx, right_fitx, left_radius_of_curvature, right_radius_of_curvature, offset, width, img_annotated = self.locate_lane_lines(img_processed, ploty, verbose)
         detected = True
 
         # Combine the detected fits
@@ -66,7 +66,7 @@ class LineTracker:
         else:
             width = 0
             offset = 0
-        img = self.visualize(img, self.M, self.Minv, self.left_line.best_fit, self.right_line.best_fit, ploty, self.left_line.radius_of_curvature, self.right_line.radius_of_curvature, offset, width, verbose)
+        img = self.visualize(img, self.M, self.Minv, self.left_line.best_fit, self.right_line.best_fit, ploty, self.left_line.radius_of_curvature, self.right_line.radius_of_curvature, offset, width, img_annotated, verbose)
 
         return img
 
@@ -106,7 +106,7 @@ class LineTracker:
         combined_binary = np.zeros_like(binary_sobelx)
         combined_binary[((l_binary == 0) & (s_binary == 1)) | (binary_sobelx == 1)] = 1
 
-        if verbose >= 3:
+        if verbose >= 4:
             # Plotting thresholded images
             import matplotlib.pyplot as plt
 
@@ -154,7 +154,7 @@ class LineTracker:
         # Could compute the inverse also by swapping the input parameters
         Minv = cv2.getPerspectiveTransform(dst, src)
 
-        if verbose >= 4:
+        if verbose >= 5:
             # Create warped image - uses linear interpolation
             warped = cv2.warpPerspective(img, M, size, flags=cv2.INTER_LINEAR)
             # Visualize undistortion
@@ -186,7 +186,7 @@ class LineTracker:
         # Create warped image - uses linear interpolation
         warped = cv2.warpPerspective(img, M, img_size, flags=cv2.INTER_LINEAR)
 
-        if verbose >= 4:
+        if verbose >= 5:
             # Visualize undistortion
             import matplotlib.pyplot as plt
             f, (ax1, ax2) = plt.subplots(1, 2, figsize=(20,10))
@@ -203,22 +203,22 @@ class LineTracker:
         middlex_car = img.shape[1] / 2
         if self.left_line.detected == True and self.right_line.detected == True:
             # Skip the sliding windows step once you know where the lines are
-            left_fit, right_fit, left_fitx, right_fitx = self.locate_lane_lines_based_on_last_search(img, ploty, self.left_line.best_fit, self.right_line.best_fit, verbose)
+            left_fit, right_fit, left_fitx, right_fitx, img = self.locate_lane_lines_based_on_last_search(img, ploty, self.left_line.best_fit, self.right_line.best_fit, verbose)
             # Sanity checks
             detected, left_radius_of_curvature, right_radius_of_curvature, offset, width = self.sanity_checks(left_fit, right_fit, ploty, middlex_car, verbose)
             if detected:
-                return left_fit, right_fit, left_fitx, right_fitx, left_radius_of_curvature, right_radius_of_curvature, offset, width
+                return left_fit, right_fit, left_fitx, right_fitx, left_radius_of_curvature, right_radius_of_curvature, offset, width, img
 
-        left_fit, right_fit, left_fitx, right_fitx = self.locate_lane_lines_histogram_search(img, ploty, verbose)
+        left_fit, right_fit, left_fitx, right_fitx, img = self.locate_lane_lines_histogram_search(img, ploty, verbose)
         # Sanity checks
         detected, left_radius_of_curvature, right_radius_of_curvature, offset, width = self.sanity_checks(left_fit, right_fit, ploty, middlex_car, verbose)
-        return left_fit, right_fit, left_fitx, right_fitx, left_radius_of_curvature, right_radius_of_curvature, offset, width
+        return left_fit, right_fit, left_fitx, right_fitx, left_radius_of_curvature, right_radius_of_curvature, offset, width, img
 
     def locate_lane_lines_histogram_search(self, img, ploty, verbose=0):
         # Assuming the imput image is a warped binary image
         # Take a histogram of the bottom half of the image
         histogram = np.sum(img[img.shape[0]//2:,:], axis=0)
-        if verbose >= 3:
+        if verbose >= 2:
             # Create an output image to draw on and visualize the result
             out_img = helper.ensure_color(img * 255)
         # discard spots to far away from the center (the car is assumed to drive in the middle of the road)
@@ -261,16 +261,16 @@ class LineTracker:
             win_xleft_high = leftx_current + margin
             win_xright_low = rightx_current - margin
             win_xright_high = rightx_current + margin
-            if verbose >= 3:
+            if verbose >= 2:
                 # Draw the windows on the visualization image
                 cv2.rectangle(out_img,
                     (win_xleft_low, win_y_low),
                     (win_xleft_high, win_y_high),
-                    (0, 255, 0), 2)
+                    (0, 255, 0), 3)
                 cv2.rectangle(out_img,
                     (win_xright_low, win_y_low),
                     (win_xright_high, win_y_high),
-                    (0, 255, 0), 2)
+                    (0, 255, 0), 3)
             # Identify the nonzero pixels in x and y within the window
             good_left_inds = (
                 (nonzeroy >= win_y_low)
@@ -310,11 +310,12 @@ class LineTracker:
         # Generate x and y values for plotting
         left_fitx = left_fit[0] * ploty ** 2 + left_fit[1] * ploty + left_fit[2]
         right_fitx = right_fit[0] * ploty ** 2 + right_fit[1] * ploty + right_fit[2]
-        if verbose >= 3:
-            import matplotlib.pyplot as plt
-
+        if verbose >= 2:
             out_img[nonzeroy[left_lane_inds], nonzerox[left_lane_inds]] = [255, 0, 0]
             out_img[nonzeroy[right_lane_inds], nonzerox[right_lane_inds]] = [0, 0, 255]
+
+        if verbose >= 4:
+            import matplotlib.pyplot as plt
             plt.imshow(out_img)
             plt.plot(left_fitx, ploty, color='yellow')
             plt.plot(right_fitx, ploty, color='yellow')
@@ -322,7 +323,10 @@ class LineTracker:
             plt.ylim(img.shape[0], 0)
             plt.show()
 
-        return left_fit, right_fit, left_fitx, right_fitx
+        if verbose >= 2:
+            return left_fit, right_fit, left_fitx, right_fitx, out_img
+        else:
+            return left_fit, right_fit, left_fitx, right_fitx, None
 
     def locate_lane_lines_based_on_last_search(self, img, ploty, left_fit, right_fit, verbose=0):
         # Now you know where the lines are you have a fit! In the next frame of video you don't need to do a blind search again, but instead you can just search in a margin around the previous line position like this:
@@ -354,9 +358,8 @@ class LineTracker:
         # Generate x and y values for plotting
         left_fitx = left_fit[0] * ploty ** 2 + left_fit[1] * ploty + left_fit[2]
         right_fitx = right_fit[0] * ploty ** 2 + right_fit[1] * ploty + right_fit[2]
-        if verbose >= 3:
-            import matplotlib.pyplot as plt
 
+        if verbose >= 2:
             # Create an image to draw on and an image to show the selection window
             out_img = helper.ensure_color(img * 255)
             window_img = np.zeros_like(out_img)
@@ -377,6 +380,9 @@ class LineTracker:
             cv2.fillPoly(window_img, np.int_([left_line_pts]), (0, 255, 0))
             cv2.fillPoly(window_img, np.int_([right_line_pts]), (0, 255, 0))
             result = cv2.addWeighted(out_img, 1, window_img, 0.3, 0)
+
+        if verbose >= 4:
+            import matplotlib.pyplot as plt
             plt.imshow(result)
             plt.plot(left_fitx, ploty, color='yellow')
             plt.plot(right_fitx, ploty, color='yellow')
@@ -384,7 +390,10 @@ class LineTracker:
             plt.ylim(img.shape[0], 0)
             plt.show()
 
-        return left_fit, right_fit, left_fitx, right_fitx
+        if verbose >= 2:
+            return left_fit, right_fit, left_fitx, right_fitx, result
+        else:
+            return left_fit, right_fit, left_fitx, right_fitx, None
 
     def scale(self, left_fit, right_fit, ploty, middlex_car, mx, my):
         scaling = [mx / (my ** 2), (mx / my), mx]
@@ -539,7 +548,7 @@ class LineTracker:
             self.left_line.line_base_pos = width / 2. - offset
             self.right_line.line_base_pos = width / 2. + offset
 
-    def visualize(self, img, M, Minv, left_fit, right_fit, ploty, left_curverad, right_curverad, offset, width, verbose=0):
+    def visualize(self, img, M, Minv, left_fit, right_fit, ploty, left_curverad, right_curverad, offset, width, img_annotated, verbose=0):
         if left_fit == None or right_fit == None:
             return img # not fit yet
 
@@ -579,5 +588,15 @@ class LineTracker:
             cv2.putText(img, "Curvature: {:.2f}".format((left_curverad + right_curverad) / 2), (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 255), 2)
             cv2.putText(img, "Offset: {:.2f}".format(offset), (50, 95), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 255), 2)
             cv2.putText(img, "Width: {:.2f}".format(width), (50, 140), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 255), 2)
+
+        if verbose >= 2:
+            # add annotated image
+            cv2.polylines(img_annotated, np.int_([pts_left]), False, (255, 255, 0), 3)
+            cv2.polylines(img_annotated, np.int_([pts_right]), False, (255, 255, 0), 3)
+
+            size_annotated = np.int_(np.array(img_annotated.shape) * 0.4)
+            img_annotated = cv2.resize(img_annotated, (size_annotated[1], size_annotated[0]))
+            margin = 20
+            img[margin:margin + size_annotated[0], -margin - size_annotated[1]:-margin] = img_annotated
 
         return img
