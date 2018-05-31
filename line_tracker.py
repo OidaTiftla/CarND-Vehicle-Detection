@@ -203,16 +203,16 @@ class LineTracker:
         middlex_car = img.shape[1] / 2
         if self.left_line.detected == True and self.right_line.detected == True:
             # Skip the sliding windows step once you know where the lines are
-            left_fit, right_fit, left_fitx, right_fitx, img = self.locate_lane_lines_based_on_last_search(img, ploty, self.left_line.best_fit, self.right_line.best_fit, verbose)
+            left_fit, right_fit, left_fitx, right_fitx, img_annotated = self.locate_lane_lines_based_on_last_search(img, ploty, self.left_line.best_fit, self.right_line.best_fit, verbose)
             # Sanity checks
             detected, left_radius_of_curvature, right_radius_of_curvature, offset, width = self.sanity_checks(left_fit, right_fit, ploty, middlex_car, verbose)
             if detected:
-                return left_fit, right_fit, left_fitx, right_fitx, left_radius_of_curvature, right_radius_of_curvature, offset, width, img
+                return left_fit, right_fit, left_fitx, right_fitx, left_radius_of_curvature, right_radius_of_curvature, offset, width, img_annotated
 
-        left_fit, right_fit, left_fitx, right_fitx, img = self.locate_lane_lines_histogram_search(img, ploty, verbose)
+        left_fit, right_fit, left_fitx, right_fitx, img_annotated = self.locate_lane_lines_histogram_search(img, ploty, verbose)
         # Sanity checks
         detected, left_radius_of_curvature, right_radius_of_curvature, offset, width = self.sanity_checks(left_fit, right_fit, ploty, middlex_car, verbose)
-        return left_fit, right_fit, left_fitx, right_fitx, left_radius_of_curvature, right_radius_of_curvature, offset, width, img
+        return left_fit, right_fit, left_fitx, right_fitx, left_radius_of_curvature, right_radius_of_curvature, offset, width, img_annotated
 
     def locate_lane_lines_histogram_search(self, img, ploty, verbose=0):
         # Assuming the imput image is a warped binary image
