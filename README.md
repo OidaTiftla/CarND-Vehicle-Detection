@@ -28,6 +28,14 @@ The `harder_challenge.mp4` video is another optional challenge and is brutal!
 If you're feeling ambitious (again, totally optional though), don't stop there!
 We encourage you to go out and take video of your own, calibrate your camera and show us how you would implement this project from scratch!
 
+### Changes for resubmission 1
+
+1. I accidentally drawed the current fit, not the averaged best fit into the output image/video (this was changed only for testing and I forgot to change it back, before submitting)
+2. Compare best fit with current fit (offset of the car within the lane; the lane width)
+3. Do a weighted average for the best fit (using a exponential function)
+4. Filter by L channel of HLS image and adjust S channel filter
+5. Draw annotated image into output video
+
 ## The rubric points are considered individually and described how each point is addressed in the implementation
 
 ### Camera Calibration
