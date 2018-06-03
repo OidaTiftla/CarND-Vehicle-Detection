@@ -153,10 +153,10 @@ Here's a [link to my video result](output/project_video_2018-05-31_16-36-26.mp4)
 You can rerun the video by executing this line in the shell:
 
 ```bash
-python detect_lane_lines.py --input project_video.mp4 -ov
+python detect_lane_lines.py --input project_video.mp4 -ovv
 ```
 
-Where `-o` says the output should be saved into the `output`-folder and `-v` sets the verbose level to `1`.
+Where `-o` says the output should be saved into the `output`-folder and `-vv` sets the verbose level to `2` (showing some calculated road parameters and the two-down-view).
 The maximum verbose level is 4, and can be defined by `-vvvv`.
 
 ### Discussion
