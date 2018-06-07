@@ -36,7 +36,7 @@ class LineTracker:
         self.M = None
         self.Minv = None
 
-    def process(self, img, verbose=0):
+    def process(self, img, img_annotated, verbose=0):
         # get projection matrix once the image size is known
         img_size = (img.shape[1], img.shape[0])
         if self.M == None or self.Minv == None:
@@ -52,7 +52,7 @@ class LineTracker:
 
         # Locate lane lines
         ploty = np.linspace(0, img.shape[0] - 1, img.shape[0])
-        left_fit, right_fit, left_fitx, right_fitx, left_radius_of_curvature, right_radius_of_curvature, offset, width, img_annotated = self.locate_lane_lines(img_processed, ploty, verbose)
+        left_fit, right_fit, left_fitx, right_fitx, left_radius_of_curvature, right_radius_of_curvature, offset, width, img_topview = self.locate_lane_lines(img_processed, ploty, verbose)
         detected = True
 
         # Combine the detected fits
@@ -66,9 +66,9 @@ class LineTracker:
         else:
             width = 0
             offset = 0
-        img = self.visualize(img, self.M, self.Minv, self.left_line.best_fit, self.right_line.best_fit, ploty, self.left_line.radius_of_curvature, self.right_line.radius_of_curvature, offset, width, img_annotated, verbose)
+        img_annotated = self.visualize(img, img_annotated, self.M, self.Minv, self.left_line.best_fit, self.right_line.best_fit, ploty, self.left_line.radius_of_curvature, self.right_line.radius_of_curvature, offset, width, img_topview, verbose)
 
-        return img
+        return img_annotated
 
     def color_and_gradient_filtering(self, img, verbose=0):
         # Convert to HLS color space and separate the S channel
@@ -203,16 +203,16 @@ class LineTracker:
         middlex_car = img.shape[1] / 2
         if self.left_line.detected == True and self.right_line.detected == True:
             # Skip the sliding windows step once you know where the lines are
-            left_fit, right_fit, left_fitx, right_fitx, img_annotated = self.locate_lane_lines_based_on_last_search(img, ploty, self.left_line.best_fit, self.right_line.best_fit, verbose)
+            left_fit, right_fit, left_fitx, right_fitx, img_topview = self.locate_lane_lines_based_on_last_search(img, ploty, self.left_line.best_fit, self.right_line.best_fit, verbose)
             # Sanity checks
             detected, left_radius_of_curvature, right_radius_of_curvature, offset, width = self.sanity_checks(left_fit, right_fit, ploty, middlex_car, verbose)
             if detected:
-                return left_fit, right_fit, left_fitx, right_fitx, left_radius_of_curvature, right_radius_of_curvature, offset, width, img_annotated
+                return left_fit, right_fit, left_fitx, right_fitx, left_radius_of_curvature, right_radius_of_curvature, offset, width, img_topview
 
-        left_fit, right_fit, left_fitx, right_fitx, img_annotated = self.locate_lane_lines_histogram_search(img, ploty, verbose)
+        left_fit, right_fit, left_fitx, right_fitx, img_topview = self.locate_lane_lines_histogram_search(img, ploty, verbose)
         # Sanity checks
         detected, left_radius_of_curvature, right_radius_of_curvature, offset, width = self.sanity_checks(left_fit, right_fit, ploty, middlex_car, verbose)
-        return left_fit, right_fit, left_fitx, right_fitx, left_radius_of_curvature, right_radius_of_curvature, offset, width, img_annotated
+        return left_fit, right_fit, left_fitx, right_fitx, left_radius_of_curvature, right_radius_of_curvature, offset, width, img_topview
 
     def locate_lane_lines_histogram_search(self, img, ploty, verbose=0):
         # Assuming the imput image is a warped binary image
@@ -548,7 +548,7 @@ class LineTracker:
             self.left_line.line_base_pos = width / 2. - offset
             self.right_line.line_base_pos = width / 2. + offset
 
-    def visualize(self, img, M, Minv, left_fit, right_fit, ploty, left_curverad, right_curverad, offset, width, img_annotated, verbose=0):
+    def visualize(self, img, img_annotated, M, Minv, left_fit, right_fit, ploty, left_curverad, right_curverad, offset, width, img_topview, verbose=0):
         if left_fit == None or right_fit == None:
             return img # not fit yet
 
@@ -581,22 +581,22 @@ class LineTracker:
         # Warp the blank back to original image space using inverse perspective matrix (Minv)
         newwarp = cv2.warpPerspective(color_warp, Minv, (img.shape[1], img.shape[0]))
         # Combine the result with the original image
-        img = cv2.addWeighted(img, 1, newwarp, 0.3, 0)
+        img_annotated = cv2.addWeighted(img_annotated, 1, newwarp, 0.3, 0)
 
         if verbose >= 1:
             # add some infos
-            cv2.putText(img, "Curvature: {:.2f}".format((left_curverad + right_curverad) / 2), (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 255), 2)
-            cv2.putText(img, "Offset: {:.2f}".format(offset), (50, 95), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 255), 2)
-            cv2.putText(img, "Width: {:.2f}".format(width), (50, 140), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 255), 2)
+            cv2.putText(img_annotated, "Curvature: {:.2f}".format((left_curverad + right_curverad) / 2), (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 255), 2)
+            cv2.putText(img_annotated, "Offset: {:.2f}".format(offset), (50, 95), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 255), 2)
+            cv2.putText(img_annotated, "Width: {:.2f}".format(width), (50, 140), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 255), 2)
 
         if verbose >= 2:
             # add annotated image
-            cv2.polylines(img_annotated, np.int_([pts_left]), False, (255, 255, 0), 3)
-            cv2.polylines(img_annotated, np.int_([pts_right]), False, (255, 255, 0), 3)
+            cv2.polylines(img_topview, np.int_([pts_left]), False, (255, 255, 0), 3)
+            cv2.polylines(img_topview, np.int_([pts_right]), False, (255, 255, 0), 3)
 
-            size_annotated = np.int_(np.array(img_annotated.shape) * 0.4)
-            img_annotated = cv2.resize(img_annotated, (size_annotated[1], size_annotated[0]))
+            size_annotated = np.int_(np.array(img_topview.shape) * 0.4)
+            img_topview = cv2.resize(img_topview, (size_annotated[1], size_annotated[0]))
             margin = 20
-            img[margin:margin + size_annotated[0], -margin - size_annotated[1]:-margin] = img_annotated
+            img_annotated[margin:margin + size_annotated[0], -margin - size_annotated[1]:-margin] = img_topview
 
-        return img
+        return img_annotated
