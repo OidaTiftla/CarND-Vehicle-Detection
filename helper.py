@@ -5,7 +5,13 @@ import cv2
 import os
 
 def read_img(path):
-    return mpimg.imread(path)
+    # Read in each one by one
+    img = mpimg.imread(path)
+    # .png images are scaled 0 to 1 by mpimg and
+    # .jpg are scaled 0 to 255
+    if not(path.endswith('.png')):
+        img = img.astype(np.float32) / 255.
+    return img
 
 def write_img(img, path):
     if len(img.shape) > 2:
@@ -59,3 +65,17 @@ def weighted_img(img, initial_img, α=0.8, β=1., γ=0.):
     NOTE: initial_img and img must be the same shape!
     """
     return cv2.addWeighted(initial_img, α, img, β, γ)
+
+# Define a function that takes an image, a list of bounding boxes,
+# and optional color tuple and line thickness as inputs
+# then draws boxes in that color on the output
+# Add bounding boxes in this format, these are just example coordinates.
+# bboxes = [((280, 500), (380, 580)), ((490, 510), (550, 570)), ((860, 520), (1130, 680))]
+def draw_bounding_boxes(img, bboxes, color=(0, 0, 255), thick=6):
+    # make a copy of the image
+    draw_img = np.copy(img)
+    # draw each bounding box on your image copy using cv2.rectangle()
+    for bbox in bboxes:
+        cv2.rectangle(draw_img, bbox[0], bbox[1], color, thick)
+    # return the image copy with boxes drawn
+    return draw_img # Change this line to return image copy with boxes
