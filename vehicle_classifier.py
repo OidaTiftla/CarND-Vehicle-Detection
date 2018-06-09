@@ -324,11 +324,12 @@ class VehicleClassifierTrainer:
         # Use a linear SVC (good in speed and accuracy)
         svc = LinearSVC()
         # Check the training time for the SVC
+        print('Start training SVC...')
         t1 = time.time()
         # train classifier
         svc.fit(X_train, y_train)
         t2 = time.time()
-        print(round(t2-t1, 2), 'Seconds to train SVC...')
+        print(round(t2-t1, 2), 'seconds to train SVC...')
         # Check the score of the SVC
         print('Test Accuracy of SVC = ', round(svc.score(X_test, y_test), 4))
         self.classifier.classifier = svc
