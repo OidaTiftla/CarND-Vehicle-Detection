@@ -41,5 +41,6 @@ read_images(args.input_non_cars, 0)
 vehicle_classifier = vehicle_classifier_trainer.train()
 
 # save classifier
-print("Save classifier to:", args.output)
-vehicle_classifier.save(args.output)
+if not(args.output is None):
+    print("Save classifier to:", args.output)
+    vehicle_classifier.save(args.output)
