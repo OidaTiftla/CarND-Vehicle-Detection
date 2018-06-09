@@ -10,6 +10,7 @@ import cv2
 import matplotlib.pyplot as plt
 
 import os
+import glob
 import helper
 import matplotlib.image as mpimg
 from vehicle_classifier import VehicleClassifier, VehicleClassifierTrainer
@@ -19,14 +20,18 @@ vehicle_classifier_trainer = VehicleClassifierTrainer()
 def read_images(filenames, label):
     global vehicle_classifier_trainer
     for fname in filenames:
-        ext = os.path.splitext(fname)[-1]
-        if ext in ['.jpg', '.png']:
-            # Read image
-            print("Read image:", fname)
-            img = helper.read_img(fname)
-            vehicle_classifier_trainer.add_training_img(img, label)
+        if os.path.isdir(fname):
+            files = glob.glob(os.path.join(fname, '*'))
+            read_images(files, label)
         else:
-            print("Unknown file extension:", fname)
+            ext = os.path.splitext(fname)[-1]
+            if ext in ['.jpg', '.png']:
+                # Read image
+                print("Read image:", fname)
+                img = helper.read_img(fname)
+                vehicle_classifier_trainer.add_training_img(img, label)
+            else:
+                print("Unknown file extension:", fname)
 
 # read images
 read_images(args.input_cars, 1)
