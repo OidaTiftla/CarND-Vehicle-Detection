@@ -88,7 +88,7 @@ class VehicleTracker:
         return bounding_boxes
 
     def visualize(self, img, img_annotated, heatmap, vehicles, verbose):
-        img_annotated = helper.draw_bounding_boxes(img_annotated, vehicles)
+        img_annotated = helper.draw_bounding_boxes(img_annotated, vehicles, (255, 0, 0))
 
         if verbose >= 2:
             # color heatmap
