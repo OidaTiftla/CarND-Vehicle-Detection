@@ -9,8 +9,8 @@ def read_img(path):
     img = mpimg.imread(path)
     # .png images are scaled 0 to 1 by mpimg and
     # .jpg are scaled 0 to 255
-    if not(path.endswith('.png')):
-        img = img.astype(np.float32) / 255.
+    if path.endswith('.png'):
+        img = (img * 255).astype(np.uint8)
     return img
 
 def write_img(img, path):

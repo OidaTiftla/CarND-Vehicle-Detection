@@ -2,6 +2,7 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("-i", "--input", help="the input video (.mp4,.jpg,.png)", nargs='+')
 parser.add_argument("--calib", help="the calibration file for the camera (.p)", default='camera.p')
+parser.add_argument("--classifier", help="the classifier file for the vehicle_classifier (.p)", default='vehicle_classifier.p')
 parser.add_argument("-v", "--verbose", help="level of verbosity (specify this option up to 5 times, for the most detailed output)", action='count', default=0)
 parser.add_argument("-o", "--output", help="save output into output directory", action='store_true')
 parser.add_argument("-s", "--samples", help="save each frame from video into test_images directory", action='store_true')
@@ -10,6 +11,10 @@ args = parser.parse_args()
 print("Load calibration from:", args.calib)
 from camera import Camera
 cam = Camera.from_file(args.calib)
+
+print("Load vehicle classifier from:", args.classifier)
+from vehicle_classifier import VehicleClassifier
+vehicle_classifier = VehicleClassifier.from_file(args.classifier)
 
 import numpy as np
 import cv2
@@ -77,7 +82,7 @@ for fname in args.input:
         print("Read image:", fname)
         img = helper.read_img(fname)
         line_tracker = LineTracker()
-        vehicle_tracker = VehicleTracker()
+        vehicle_tracker = VehicleTracker(vehicle_classifier)
         img = process_image(img)
         if args.output:
             helper.write_img(img, 'output/' + os.path.basename(fname))
@@ -87,7 +92,7 @@ for fname in args.input:
     elif ext in ['.mp4']:
         # Read video
         line_tracker = LineTracker()
-        vehicle_tracker = VehicleTracker()
+        vehicle_tracker = VehicleTracker(vehicle_classifier)
         process_video(fname)
     else:
         print("Unknown file extension:", fname)

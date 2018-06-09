@@ -3,6 +3,7 @@ import numpy as np
 import pickle
 import cv2
 import time
+import helper
 from sklearn.svm import LinearSVC
 from sklearn.preprocessing import StandardScaler
 from skimage.feature import hog
@@ -11,7 +12,6 @@ from skimage.feature import hog
 # if you are using scikit-learn >= 0.18 then use this:
 # from sklearn.model_selection import train_test_split
 from sklearn.cross_validation import train_test_split
-from scipy.ndimage.measurements import label
 
 class VehicleClassifier:
     def __init__(self, scaler, classifier,
@@ -67,33 +67,63 @@ class VehicleClassifier:
     def classify(self, features):
         return self.classifier.predict(features)
 
-    def search_bounding_boxes(self, img):
+    def search_bounding_boxes(self, img, verbose=0):
         # sliding windows
         windows = []
-        windows += self.slide_window(img, x_start_stop=[None, None], y_start_stop=[470, 470+48],
-                            xy_window=(48, 48), xy_overlap=(0.7, 0.7))
-        windows += self.slide_window(img, x_start_stop=[None, None], y_start_stop=[500, 500+72],
-                            xy_window=(72, 72), xy_overlap=(0.7, 0.7))
-        windows += self.slide_window(img, x_start_stop=[None, None], y_start_stop=[530, 530+128],
-                            xy_window=(128, 128), xy_overlap=(0.7, 0.7))
-        windows += self.slide_window(img, x_start_stop=[None, None], y_start_stop=[500, 500+192],
-                            xy_window=(192, 192), xy_overlap=(0.7, 0.7))
+        imwidth = img.shape[1]
+        imheight = img.shape[0]
+
+        # street parameters
+        far_left = (580, 460)
+        far_right = (701, 460)
+        near_left = (234, 700)
+        near_right = (1069, 700)
+        def get_width_for_y(y):
+            width_far = far_right[0] - far_left[0]
+            width_near = near_right[0] - near_left[0]
+            delta_width = width_far - width_near
+            delta_y = far_left[1] - near_left[1]
+            m = float(delta_y) / delta_width
+            t = far_left[1] - m * width_far
+            width = (y - t) / m
+            return width
+        # create windows
+        for y in [439, 445, 460, 480, 510, 570, 630]:
+            # y = 439 + ((700 - 439) / 5.) * i
+            width = get_width_for_y(y)
+            new_windows = self.slide_window(img,
+                            x_start_stop=[np.clip(imwidth / 2. - 5 * width, 0, imwidth), np.clip(imwidth / 2. + 5 * width, 0, imwidth)],
+                            # x_start_stop=[None, None],
+                            y_start_stop=[np.clip(y - width, 0, imheight), np.clip(y + width * 0.5, 0, imheight)],
+                            xy_window=(width, width), xy_overlap=(0.7, 0.7))
+            if verbose >= 5:
+                # display windows
+                import matplotlib.pyplot as plt
+                search_windows_img = helper.draw_bounding_boxes(img, new_windows, (0, 255, 255))
+                search_windows_img = helper.draw_bounding_boxes(search_windows_img, [new_windows[0], new_windows[-1]], (255, 0, 0))
+                plt.imshow(search_windows_img)
+                plt.show()
+            windows += new_windows
+        # filter windows, which are not squares
+        def aspect_ratio(w):
+            (x1, y1), (x2, y2) = w
+            width = x2 - x1
+            height = y2 - y1
+            return width / height
+        windows = [w for w in windows if abs(aspect_ratio(w) - 1) < 0.05]
+
+        # display windows
+        if verbose >= 4:
+            import matplotlib.pyplot as plt
+            search_windows_img = helper.draw_bounding_boxes(img, windows, (0, 255, 255))
+            plt.imshow(search_windows_img)
+            plt.show()
+
         # subsampling HOG features
         # classify
         hot_windows = self.search_windows(img, windows)
-        # heat map
-        heat = np.zeros_like(img[:,:,0]).astype(np.float)
-        heat = self.add_heat(heat, hot_windows)
-        heat = np.clip(heat, 0, 255)
-        # threshold heat map
-        heat = self.apply_threshold(heat, 2)
-        # label pixels which belong to the same cars
-        labels = label(heat)
-        # create bounding boxes around the identified labels
-        bounding_boxes = self.get_bounding_boxes_for_labels(labels)
-        # track over multiple frames
-        # estimate position in follwoing frames
-        return bounding_boxes
+
+        return hot_windows
 
     # Define a function to extract features from a list of images
     # Have this function call bin_spatial() and color_hist()
@@ -138,7 +168,7 @@ class VehicleClassifier:
     # Define a function that takes an image,
     def slide_window(self, img, x_start_stop=[None, None], y_start_stop=[None, None],
                     xy_window=(64, 64), xy_overlap=(0.5, 0.5)):
-        xy_window = np.array(xy_window)
+        xy_window = np.int_(np.round(np.array(xy_window)))
         xy_overlap = np.array(xy_overlap)
         # If x and/or y start/stop positions not defined, set to image size
         if x_start_stop[0] == None: x_start_stop[0] = 0
@@ -148,9 +178,12 @@ class VehicleClassifier:
         # Compute the span of the region to be searched
         xy_span = np.array((x_start_stop[1] - x_start_stop[0], y_start_stop[1] - y_start_stop[0]))
         # Compute the number of pixels per step in x/y
-        xy_step = np.int_(np.floor(xy_window * (1 - xy_overlap)))
+        xy_pix_per_step = np.int_(np.floor(xy_window * (1 - xy_overlap)))
         # Compute the number of windows in x/y
-        xy_steps = np.int_(np.floor((xy_span - xy_window) / xy_step + 1))
+        xy_steps = np.int_(np.floor((xy_span - xy_window) / xy_pix_per_step + 1))
+        xy_steps[xy_steps < 1] = 1
+        xy_pix_per_step = (xy_span - xy_window) / (xy_steps - 1.)
+        xy_pix_per_step[xy_steps <= 1] = 0
         # Initialize a list to append window positions to
         window_list = []
         # Loop through finding x and y window positions
@@ -158,11 +191,20 @@ class VehicleClassifier:
         #     you'll be considering windows one by one with your
         #     classifier, so looping makes sense
         for yi in range(xy_steps[1]):
-            y = y_start_stop[0] + yi * xy_step[1]
+            if xy_steps[1] <= 1:
+                y = np.int(np.round((y_start_stop[1] - y_start_stop[0]) / 2. + y_start_stop[0] - xy_window[1] / 2.))
+            else:
+                y = np.int(np.floor(y_start_stop[0] + yi * xy_pix_per_step[1]))
             for xi in range(xy_steps[0]):
-                x = x_start_stop[0] + xi * xy_step[0]
+                if xy_steps[0] <= 1:
+                    x = np.int(np.round((x_start_stop[1] - x_start_stop[0]) / 2. + x_start_stop[0] - xy_window[0] / 2.))
+                else:
+                    x = np.int(np.floor(x_start_stop[0] + xi * xy_pix_per_step[0]))
                 # Calculate each window position
-                w = ((x, y), tuple((x, y) + xy_window))
+                w = np.array(((x, y), tuple((x, y) + xy_window)))
+                w[:,0] = np.clip(w[:,0], x_start_stop[0], x_start_stop[1])
+                w[:,1] = np.clip(w[:,1], y_start_stop[0], y_start_stop[1])
+                w = tuple(map(tuple, w))
                 # Append window position to list
                 window_list.append(w)
         # Return the list of windows
@@ -230,38 +272,6 @@ class VehicleClassifier:
             block_norm="L2-Hys",
             transform_sqrt=False)
 
-    def add_heat(self, heatmap, bbox_list):
-        # Iterate through list of bboxes
-        for box in bbox_list:
-            # Add += 1 for all pixels inside each bbox
-            # Assuming each "box" takes the form ((x1, y1), (x2, y2))
-            heatmap[box[0][1]:box[1][1], box[0][0]:box[1][0]] += 1
-
-        # Return updated heatmap
-        return heatmap
-
-    def apply_threshold(self, heatmap, threshold):
-        # Zero out pixels below the threshold
-        heatmap[heatmap <= threshold] = 0
-        # Return thresholded map
-        return heatmap
-
-    def get_bounding_boxes_for_labels(self, labels):
-        bounding_boxes = []
-        # Iterate through all detected cars
-        for car_number in range(1, labels[1]+1):
-            # Find pixels with each car_number label value
-            nonzero = (labels[0] == car_number).nonzero()
-            # Identify x and y values of those pixels
-            nonzeroy = np.array(nonzero[0])
-            nonzerox = np.array(nonzero[1])
-            # Define a bounding box based on min/max x and y
-            bbox = ((np.min(nonzerox), np.min(nonzeroy)), (np.max(nonzerox), np.max(nonzeroy)))
-            # append to list
-            bounding_boxes.append(bbox)
-        # return all bounding boxes
-        return bounding_boxes
-
 class VehicleClassifierTrainer:
     def __init__(self):
         self.features_list = []
@@ -269,12 +279,12 @@ class VehicleClassifierTrainer:
 
         # parameters
         color_space = 'LUV' # Can be RGB, HSV, LUV, HLS, YUV, YCrCb
-        spatial_size = (16, 16) # Spatial binning dimensions
+        spatial_size = (32, 32) # Spatial binning dimensions
         hist_bins = 16 # Number of histogram bins
         hist_range = (0, 256) # Range of histogram
         orient = 9 # HOG orientations
         pix_per_cell = 16 # HOG pixels per cell
-        cell_per_block = 3 # HOG cells per block
+        cell_per_block = 2 # HOG cells per block
         hog_channels = 0 # Can be 0, 1, 2, 'GRAY' or 'ALL'
 
         self.classifier = VehicleClassifier(None, None,
