@@ -298,11 +298,19 @@ class VehicleClassifierTrainer:
             hog_channels)
 
     def train(self):
+        print('Data summary')
+        print('============')
+        hist = np.histogram(self.labels_list, bins=2, range=(0, 1))
+        print('Total cars:', hist[0][1], 'non-cars:', hist[0][0])
         # Split up data into randomized training and test sets
         rand_state = 76 #np.random.randint(0, 100)
         X_train, X_test, y_train, y_test = train_test_split(
             self.features_list, self.labels_list,
             test_size=0.2, random_state=rand_state)
+        hist = np.histogram(y_train, bins=2, range=(0, 1))
+        print('Train cars:', hist[0][1], 'non-cars:', hist[0][0])
+        hist = np.histogram(y_test, bins=2, range=(0, 1))
+        print('Test cars:', hist[0][1], 'non-cars:', hist[0][0])
 
         # Create an array stack, NOTE: StandardScaler() expects np.float64
         X_train = np.vstack(X_train).astype(np.float64)
