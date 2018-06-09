@@ -15,6 +15,7 @@ from sklearn.cross_validation import train_test_split
 
 class VehicleClassifier:
     def __init__(self, scaler, classifier,
+                classify_img_size,
                 color_space,
                 spatial_size,
                 hist_bins,
@@ -25,6 +26,7 @@ class VehicleClassifier:
                 hog_channel):
         self.scaler = scaler
         self.classifier = classifier
+        self.classify_img_size = classify_img_size
         self.color_space = color_space # Can be RGB, HSV, LUV, HLS, YUV, YCrCb
         self.spatial_size = spatial_size
         self.hist_bins = hist_bins
@@ -38,6 +40,7 @@ class VehicleClassifier:
         data = {}
         data['scaler'] = self.scaler
         data['classifier'] = self.classifier
+        data['classify_img_size'] = self.classify_img_size
         data['color_space'] = self.color_space
         data['spatial_size'] = self.spatial_size
         data['hist_bins'] = self.hist_bins
@@ -54,6 +57,7 @@ class VehicleClassifier:
         return cls(
             data['scaler'],
             data['classifier'],
+            data['classify_img_size'],
             data['color_space'],
             data['spatial_size'],
             data['hist_bins'],
@@ -218,7 +222,7 @@ class VehicleClassifier:
         #2) Iterate over all windows in the list
         for window in windows:
             #3) Extract the test window from original image
-            test_img = cv2.resize(img[window[0][1]:window[1][1], window[0][0]:window[1][0]], (64, 64))
+            test_img = cv2.resize(img[window[0][1]:window[1][1], window[0][0]:window[1][0]], self.classify_img_size)
             #4) Extract features for that window using single_img_features()
             features = self.extract_features(test_img)
             #5) Scale extracted features to be fed to classifier
@@ -278,6 +282,7 @@ class VehicleClassifierTrainer:
         self.labels_list = []
 
         # parameters
+        self.classify_img_size = (64, 64)
         color_space = 'LUV' # Can be RGB, HSV, LUV, HLS, YUV, YCrCb
         spatial_size = (32, 32) # Spatial binning dimensions
         hist_bins = 16 # Number of histogram bins
@@ -288,6 +293,7 @@ class VehicleClassifierTrainer:
         hog_channels = 0 # Can be 0, 1, 2, 'GRAY' or 'ALL'
 
         self.classifier = VehicleClassifier(None, None,
+            self.classify_img_size,
             color_space,
             spatial_size,
             hist_bins,
@@ -336,6 +342,9 @@ class VehicleClassifierTrainer:
         return self.classifier
 
     def add_training_img(self, img, label):
+        if img.shape[0] != self.classify_img_size[0] or img.shape[1] != self.classify_img_size[1]:
+            print('input shape not', self.classify_img_size)
+            img = cv2.resize(img, self.classify_img_size)
         features = self.classifier.extract_features(img)
         self.features_list.append(features)
         self.labels_list.append(label)
