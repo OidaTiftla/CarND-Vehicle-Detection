@@ -288,11 +288,11 @@ class VehicleClassifier:
 
 class VehicleClassifierTrainer:
     def __init__(self):
-        self.features_list = []
+        self.files_list = []
         self.labels_list = []
 
         # parameters
-        self.classify_img_size = (64, 64)
+        classify_img_size = (64, 64)
         color_space = 'YCrCb' # Can be RGB, HSV, LUV, HLS, YUV, YCrCb
         spatial_size = (0, 0) # Spatial binning dimensions
         hist_bins = 0 # Number of histogram bins
@@ -303,7 +303,7 @@ class VehicleClassifierTrainer:
         hog_channels = 'ALL' # Can be 0, 1, 2, 'GRAY' or 'ALL'
 
         self.classifier = VehicleClassifier(None, None,
-            self.classify_img_size,
+            classify_img_size,
             color_space,
             spatial_size,
             hist_bins,
@@ -320,13 +320,39 @@ class VehicleClassifierTrainer:
         print('Total cars:', hist[0][1], 'non-cars:', hist[0][0])
         # Split up data into randomized training and test sets
         rand_state = 76 #np.random.randint(0, 100)
-        X_train, X_test, y_train, y_test = train_test_split(
-            self.features_list, self.labels_list,
+        files_train, files_test, y_train, y_test = train_test_split(
+            self.files_list, self.labels_list,
             test_size=0.2, random_state=rand_state)
         hist = np.histogram(y_train, bins=2, range=(0, 1))
         print('Train cars:', hist[0][1], 'non-cars:', hist[0][0])
         hist = np.histogram(y_test, bins=2, range=(0, 1))
         print('Test cars:', hist[0][1], 'non-cars:', hist[0][0])
+
+        # read images
+        print("Reading images and extracting features...")
+        t1 = time.time()
+        # training dataset
+        X_train = []
+        for fname in files_train:
+            img = helper.read_img(fname)
+            if img.shape[0] != self.classifier.classify_img_size[0] or img.shape[1] != self.classifier.classify_img_size[1]:
+                print('input shape not', self.classifier.classify_img_size)
+                img = cv2.resize(img, self.classifier.classify_img_size)
+            features = self.classifier.extract_features(img)
+            X_train.append(features)
+            # augment training set
+
+        # testing dataset
+        X_test = []
+        for fname in files_test:
+            img = helper.read_img(fname)
+            if img.shape[0] != self.classifier.classify_img_size[0] or img.shape[1] != self.classifier.classify_img_size[1]:
+                print('input shape not', self.classifier.classify_img_size)
+                img = cv2.resize(img, self.classifier.classify_img_size)
+            features = self.classifier.extract_features(img)
+            X_test.append(features)
+        t2 = time.time()
+        print(round(t2-t1, 2), 'seconds to read images and extract features...')
 
         # Create an array stack, NOTE: StandardScaler() expects np.float64
         X_train = np.vstack(X_train).astype(np.float64)
@@ -352,10 +378,6 @@ class VehicleClassifierTrainer:
         self.classifier.classifier = svc
         return self.classifier
 
-    def add_training_img(self, img, label):
-        if img.shape[0] != self.classify_img_size[0] or img.shape[1] != self.classify_img_size[1]:
-            print('input shape not', self.classify_img_size)
-            img = cv2.resize(img, self.classify_img_size)
-        features = self.classifier.extract_features(img)
-        self.features_list.append(features)
+    def add_training_file(self, file, label):
+        self.files_list.append(file)
         self.labels_list.append(label)

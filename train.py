@@ -27,19 +27,13 @@ def read_images(filenames, label):
         else:
             ext = os.path.splitext(fname)[-1]
             if ext in ['.jpg', '.png']:
-                # Read image
-                img = helper.read_img(fname)
-                vehicle_classifier_trainer.add_training_img(img, label)
+                vehicle_classifier_trainer.add_training_file(fname, label)
             else:
                 print("Unknown file extension:", fname)
 
 # read images
-print("Reading images and extracting features...")
-t1 = time.time()
 read_images(args.input_cars, 1)
 read_images(args.input_non_cars, 0)
-t2 = time.time()
-print(round(t2-t1, 2), 'seconds to read images and extract features...')
 
 # train classifier
 vehicle_classifier = vehicle_classifier_trainer.train()
