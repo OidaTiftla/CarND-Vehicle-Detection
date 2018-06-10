@@ -343,6 +343,7 @@ class VehicleClassifierTrainer:
         t2 = time.time()
         print(round(t2-t1, 2), 'seconds to train SVC...')
         # Check the score of the SVC
+        print('Train Accuracy of SVC = ', round(svc.score(X_train, y_train), 4))
         print('Test Accuracy of SVC = ', round(svc.score(X_test, y_test), 4))
         self.classifier.classifier = svc
         return self.classifier
