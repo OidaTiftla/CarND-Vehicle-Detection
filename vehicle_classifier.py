@@ -4,6 +4,7 @@ import pickle
 import cv2
 import time
 import helper
+from sklearn.utils import shuffle
 from sklearn.svm import LinearSVC
 from sklearn.preprocessing import StandardScaler
 from skimage.feature import hog
@@ -286,6 +287,11 @@ class VehicleClassifier:
             block_norm="L2-Hys",
             transform_sqrt=False)
 
+def rotate_img(image, angle_deg):
+    image_center = tuple(np.array(image.shape[1::-1]) / 2)
+    rot_mat = cv2.getRotationMatrix2D(image_center, angle_deg, 1.0)
+    return cv2.warpAffine(image, rot_mat, image.shape[1::-1], flags=cv2.INTER_LINEAR)
+
 class VehicleClassifierTrainer:
     def __init__(self):
         self.files_list = []
@@ -320,12 +326,12 @@ class VehicleClassifierTrainer:
         print('Total cars:', hist[0][1], 'non-cars:', hist[0][0])
         # Split up data into randomized training and test sets
         rand_state = 76 #np.random.randint(0, 100)
-        files_train, files_test, y_train, y_test = train_test_split(
+        files_train, files_test, labels_train, labels_test = train_test_split(
             self.files_list, self.labels_list,
             test_size=0.2, random_state=rand_state)
-        hist = np.histogram(y_train, bins=2, range=(0, 1))
+        hist = np.histogram(labels_train, bins=2, range=(0, 1))
         print('Train cars:', hist[0][1], 'non-cars:', hist[0][0])
-        hist = np.histogram(y_test, bins=2, range=(0, 1))
+        hist = np.histogram(labels_test, bins=2, range=(0, 1))
         print('Test cars:', hist[0][1], 'non-cars:', hist[0][0])
 
         # read images
@@ -333,24 +339,41 @@ class VehicleClassifierTrainer:
         t1 = time.time()
         # training dataset
         X_train = []
-        for fname in files_train:
+        y_train = []
+        for i in range(len(files_train)):
+            fname = files_train[i]
+            label = labels_train[i]
             img = helper.read_img(fname)
             if img.shape[0] != self.classifier.classify_img_size[0] or img.shape[1] != self.classifier.classify_img_size[1]:
                 print('input shape not', self.classifier.classify_img_size)
                 img = cv2.resize(img, self.classifier.classify_img_size)
-            features = self.classifier.extract_features(img)
-            X_train.append(features)
+            X_train.append(self.classifier.extract_features(img))
+            y_train.append(label)
             # augment training set
+            X_train.append(self.classifier.extract_features(rotate_img(img, 5)))
+            y_train.append(label)
+            X_train.append(self.classifier.extract_features(rotate_img(img, -5)))
+            y_train.append(label)
+            X_train.append(self.classifier.extract_features(rotate_img(img, 10)))
+            y_train.append(label)
+            X_train.append(self.classifier.extract_features(rotate_img(img, -10)))
+            y_train.append(label)
+        X_train, y_train = shuffle(X_train, y_train)
+        hist = np.histogram(y_train, bins=2, range=(0, 1))
+        print('Train cars:', hist[0][1], 'non-cars:', hist[0][0], '[after augmentation]')
 
         # testing dataset
         X_test = []
-        for fname in files_test:
+        y_test = []
+        for i in range(len(files_test)):
+            fname = files_test[i]
+            label = labels_test[i]
             img = helper.read_img(fname)
             if img.shape[0] != self.classifier.classify_img_size[0] or img.shape[1] != self.classifier.classify_img_size[1]:
                 print('input shape not', self.classifier.classify_img_size)
                 img = cv2.resize(img, self.classifier.classify_img_size)
-            features = self.classifier.extract_features(img)
-            X_test.append(features)
+            X_test.append(self.classifier.extract_features(img))
+            y_test.append(label)
         t2 = time.time()
         print(round(t2-t1, 2), 'seconds to read images and extract features...')
 
