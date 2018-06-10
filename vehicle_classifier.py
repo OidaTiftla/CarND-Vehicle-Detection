@@ -293,12 +293,12 @@ class VehicleClassifierTrainer:
 
         # parameters
         self.classify_img_size = (64, 64)
-        color_space = 'HSV' # Can be RGB, HSV, LUV, HLS, YUV, YCrCb
-        spatial_size = (32, 32) # Spatial binning dimensions
-        hist_bins = 32 # Number of histogram bins
+        color_space = 'YCrCb' # Can be RGB, HSV, LUV, HLS, YUV, YCrCb
+        spatial_size = (0, 0) # Spatial binning dimensions
+        hist_bins = 0 # Number of histogram bins
         hist_range = (0, 256) # Range of histogram
         orient = 9 # HOG orientations
-        pix_per_cell = 8 # HOG pixels per cell
+        pix_per_cell = 16 # HOG pixels per cell
         cell_per_block = 2 # HOG cells per block
         hog_channels = 'ALL' # Can be 0, 1, 2, 'GRAY' or 'ALL'
 
