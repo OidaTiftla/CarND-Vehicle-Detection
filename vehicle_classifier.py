@@ -120,6 +120,8 @@ class VehicleClassifier:
             windows = [w for w in windows if abs(aspect_ratio(w) - 1) < 0.05]
 
             # display windows
+            if verbose >= 1:
+                print('Searching windows:', len(windows))
             if verbose >= 4:
                 import matplotlib.pyplot as plt
                 search_windows_img = helper.draw_bounding_boxes(img, windows, (0, 255, 255))
