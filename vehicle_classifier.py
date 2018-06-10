@@ -247,6 +247,8 @@ class VehicleClassifier:
 
     # Define a function to compute color histogram features
     def color_hist(self, img):
+        if self.hist_bins == 0 or self.hist_range[0] == self.hist_range[1]:
+            return np.array([])
         # Compute the histogram of the color channels separately
         channel1_hist = np.histogram(img[:,:,0], bins=self.hist_bins, range=self.hist_range)
         channel2_hist = np.histogram(img[:,:,1], bins=self.hist_bins, range=self.hist_range)
@@ -263,6 +265,8 @@ class VehicleClassifier:
     # IN YOUR PROJECT THAT IF YOU READ THE IMAGE WITH
     # cv2.imread() INSTEAD YOU START WITH BGR COLOR!
     def bin_spatial(self, img):
+        if self.spatial_size[0] == 0 or self.spatial_size[1] == 0:
+            return np.array([])
         # Use cv2.resize().ravel() to create the feature vector
         features = cv2.resize(img, self.spatial_size).ravel()
         # Return the feature vector
