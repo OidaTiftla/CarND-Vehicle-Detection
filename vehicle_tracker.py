@@ -24,7 +24,9 @@ class VehicleTracker:
         # heat map
         heat = np.zeros_like(img[:,:,0]).astype(np.float)
         heat = self.add_heat(heat, hot_windows)
-        heat = np.clip(heat, 0, 5)
+        # heat = np.clip(heat, 0, 6)
+        heat = self.apply_threshold(heat, 2)
+        heat[heat > 0] = 1
         if verbose >= 4:
             # display windows
             import matplotlib.pyplot as plt
