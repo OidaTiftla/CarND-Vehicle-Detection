@@ -96,13 +96,13 @@ class VehicleClassifier:
                 width = (y - t) / m
                 return width
             # create windows
-            for y in [439, 445, 460, 480, 510]:
+            for y in [445, 460, 480, 510]:
                 # y = 439 + ((700 - 439) / 5.) * i
                 width = get_width_for_y(y)
                 new_windows = self.slide_window(img,
-                                x_start_stop=[np.clip(imwidth / 2. - 5 * width, 0, imwidth), np.clip(imwidth / 2. + 5 * width, 0, imwidth)],
+                                x_start_stop=[np.clip(imwidth / 2. - 6 * width, 0, imwidth), np.clip(imwidth / 2. + 6 * width, 0, imwidth)],
                                 # x_start_stop=[None, None],
-                                y_start_stop=[np.clip(y - width, 0, imheight), np.clip(y + width * 0.5, 0, imheight)],
+                                y_start_stop=[np.clip(y - 0.6 * width, 0, imheight), np.clip(y + width, 0, imheight)],
                                 xy_window=(width, width), xy_overlap=(0.7, 0.7))
                 if verbose >= 5:
                     # display windows
