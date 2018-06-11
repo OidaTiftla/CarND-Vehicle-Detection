@@ -45,16 +45,17 @@ class VehicleTracker:
         self.multiple_frames_heatmap = np.clip(self.multiple_frames_heatmap, self.multiple_frames_heatmap_clip[0], self.multiple_frames_heatmap_clip[1])
         # threshold heat map
         heat = self.apply_threshold(self.multiple_frames_heatmap.copy(), self.multiple_frames_heatmap_threshold)
+
+        # Locate vehicles
         # label pixels which belong to the same cars
         labels = label(heat)
         # create bounding boxes around the identified labels
         bounding_boxes = self.get_bounding_boxes_for_labels(labels)
-        # estimate position in follwoing frames
-
-        # Locate vehicles
         vehicles = bounding_boxes
 
         # Sanity checks & tracking (vehicle velocity vector)
+
+        # Estimate position in follwoing frames
 
         # Visualize the result
         img_annotated = self.visualize(img, img_annotated, self.multiple_frames_heatmap, vehicles, verbose)

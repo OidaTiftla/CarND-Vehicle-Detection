@@ -77,58 +77,7 @@ class VehicleClassifier:
     def search_bounding_boxes(self, img, verbose=0):
         if self.windows is None:
             # sliding windows
-            windows = []
-            imwidth = img.shape[1]
-            imheight = img.shape[0]
-
-            # street parameters
-            far_left = (580, 460)
-            far_right = (701, 460)
-            near_left = (234, 700)
-            near_right = (1069, 700)
-            def get_width_for_y(y):
-                width_far = far_right[0] - far_left[0]
-                width_near = near_right[0] - near_left[0]
-                delta_width = width_far - width_near
-                delta_y = far_left[1] - near_left[1]
-                m = float(delta_y) / delta_width
-                t = far_left[1] - m * width_far
-                width = (y - t) / m
-                return width
-            # create windows
-            for y in [445, 460, 480, 510]:
-                # y = 439 + ((700 - 439) / 5.) * i
-                width = get_width_for_y(y) * 0.75
-                new_windows = self.slide_window(img,
-                                x_start_stop=[np.clip(imwidth / 2. - 10 * width, 0, imwidth), np.clip(imwidth / 2. + 10 * width, 0, imwidth)],
-                                # x_start_stop=[None, None],
-                                y_start_stop=[np.clip(y - 0.6 * width, 0, imheight), np.clip(y + 0.4 * width, 0, imheight)],
-                                xy_window=(width, width), xy_overlap=(0.7, 0.7))
-                if verbose >= 5:
-                    # display windows
-                    import matplotlib.pyplot as plt
-                    search_windows_img = helper.draw_bounding_boxes(img, new_windows, (0, 255, 255))
-                    search_windows_img = helper.draw_bounding_boxes(search_windows_img, [new_windows[0], new_windows[-1]], (255, 0, 0))
-                    plt.imshow(search_windows_img)
-                    plt.show()
-                windows += new_windows
-            # filter windows, which are not squares
-            def aspect_ratio(w):
-                (x1, y1), (x2, y2) = w
-                width = x2 - x1
-                height = y2 - y1
-                return width / height
-            windows = [w for w in windows if abs(aspect_ratio(w) - 1) < 0.05]
-
-            # display windows
-            if verbose >= 1:
-                print('Searching windows:', len(windows))
-            if verbose >= 4:
-                import matplotlib.pyplot as plt
-                search_windows_img = helper.draw_bounding_boxes(img, windows, (0, 255, 255))
-                plt.imshow(search_windows_img)
-                plt.show()
-            self.windows = windows
+            self.windows = self.get_windows(img, verbose)
 
         # subsampling HOG features
         # classify
@@ -175,6 +124,61 @@ class VehicleClassifier:
         # combine features
         features = np.concatenate([hist_features, spatial_features, hog_features])
         return features
+
+    def get_windows(self, img, verbose=0):
+        windows = []
+        imwidth = img.shape[1]
+        imheight = img.shape[0]
+
+        # street parameters
+        far_left = (580, 460)
+        far_right = (701, 460)
+        near_left = (234, 700)
+        near_right = (1069, 700)
+        def get_width_for_y(y):
+            width_far = far_right[0] - far_left[0]
+            width_near = near_right[0] - near_left[0]
+            delta_width = width_far - width_near
+            delta_y = far_left[1] - near_left[1]
+            m = float(delta_y) / delta_width
+            t = far_left[1] - m * width_far
+            width = (y - t) / m
+            return width
+        # create windows
+        for y in [445, 460, 480, 510]:
+            # y = 439 + ((700 - 439) / 5.) * i
+            width = get_width_for_y(y) * 0.75
+            new_windows = self.slide_window(img,
+                            x_start_stop=[np.clip(imwidth / 2. - 10 * width, 0, imwidth), np.clip(imwidth / 2. + 10 * width, 0, imwidth)],
+                            # x_start_stop=[None, None],
+                            y_start_stop=[np.clip(y - 0.6 * width, 0, imheight), np.clip(y + 0.4 * width, 0, imheight)],
+                            xy_window=(width, width), xy_overlap=(0.7, 0.7))
+            if verbose >= 5:
+                # display windows
+                import matplotlib.pyplot as plt
+                search_windows_img = helper.draw_bounding_boxes(img, new_windows, (0, 255, 255))
+                search_windows_img = helper.draw_bounding_boxes(search_windows_img, [new_windows[0], new_windows[-1]], (255, 0, 0))
+                plt.imshow(search_windows_img)
+                plt.show()
+            windows += new_windows
+        # filter windows, which are not squares
+        def aspect_ratio(w):
+            (x1, y1), (x2, y2) = w
+            width = x2 - x1
+            height = y2 - y1
+            return width / height
+        windows = [w for w in windows if abs(aspect_ratio(w) - 1) < 0.05]
+
+        # display windows
+        if verbose >= 1:
+            print('Searching windows:', len(windows))
+        if verbose >= 4:
+            import matplotlib.pyplot as plt
+            search_windows_img = helper.draw_bounding_boxes(img, windows, (0, 255, 255))
+            plt.imshow(search_windows_img)
+            plt.show()
+
+        return windows
 
     # Define a function that takes an image,
     def slide_window(self, img, x_start_stop=[None, None], y_start_stop=[None, None],
