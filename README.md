@@ -128,7 +128,7 @@ The hot windows are shown in the following image:
 
 ### Video Implementation
 
-Here's a [link to my video result](output/project_video_2018-06-11_15-53-06.mp4).
+Here's a [link to my video result](output/project_video_2018-06-11_16-56-57.mp4).
 
 The following line creates the video linked above:
 
