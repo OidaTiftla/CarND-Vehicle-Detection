@@ -1,3 +1,7 @@
+# ignore the training dataset
+non-vehicles/
+non-vehicles_project_video/
+vehicles/
 
 # Created by https://www.gitignore.io/api/python
 
