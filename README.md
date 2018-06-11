@@ -181,6 +181,9 @@ The pipeline is likely to fail if the camera is mounted in a different angle wit
 
 The robustness of the pipeline can also be improved using a kalman filter or something similar, to track vehicle movements across multiple frames and further filter the positions of the cars.
 
+Further improvements can be seen in similar projects such as YOLO or SSD.
+Using those projects as the classifier would result in a much better tracking.
+
 ---
 
 # Advanced Lane Finding Project
