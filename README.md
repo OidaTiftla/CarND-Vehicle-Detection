@@ -4,15 +4,6 @@
 
 In this project, the goal is to write a software pipeline to detect vehicles in a video (started with the test_video.mp4 and later implement on full project_video.mp4).
 
-## ToDo's
-
-```bash
-python train.py --input-cars vehicles/ --input-non-cars non-vehicles/ -o vehicle_classifier.p
-```
-
-- include images to demonstrate how your code works
-- examples of the output from each stage of your pipeline
-
 ## The Project
 
 The goals / steps of this project are the following:
