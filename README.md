@@ -42,6 +42,146 @@ We encourage you to go out and take video of your own, and show us how you would
 
 ## The rubric points are considered individually and described how each point is addressed in the implementation
 
+### Histogram of Oriented Gradients (HOG)
+
+The code for this step is contained in the functions `get_hog_features(img, vis=False, feature_vec=True)` and `extract_features(img)` in the file called `vehicle_classifier.py`).
+
+The parameters for the classifier are contained in the class `VehicleClassifierTrainer` in the same file.
+
+Different color spaces and different `skimage.hog()` parameters (`orientations`, `pixels_per_cell`, and `cells_per_block`) were explored.
+
+I grabbed random images from each of the two classes and displayed them to get a feel for what the `skimage.hog()` output looks like.
+
+Here is an example using the `YCrCb` color space and HOG parameters of `orientations=9`, `pixels_per_cell=(8, 8)` and `cells_per_block=(2, 2)`:
+
+![hog_features.png](examples/hog_features.png)
+
+#### Final choice of HOG parameters
+
+I tried various combinations of parameters and found that color histogram and color bins are not as relevant as the HOG features, but still improve the classifier.
+So for the color features the values were reduced from `32` to `16` which improved the performance a bit, but the classifier could detect the vehicles with nearly the same accuracy.
+
+The best color spaces where `LUV`, `YUV`, `YCrCb`.
+They all resulted in the same accuracy for the classifier.
+Finally `YCrCb` was used.
+
+Changing the `cell_per_block` from `2` to `3` did not increase the accuracy, but took much longer to calculate, so this parameter was kept at `2`.
+
+To increase the performance further, the value for `pix_per_cell` was increased from `8` to `16`, but this resulted in an accuracy reduction of 1-2%.
+So this parameter was kept at `8`.
+
+The HOG channels were tested with `0,1,2,GRAY,ALL` and `0,GRAY,ALL` resulted in a good accuracy.
+This was tested with the colorspaces `LUV`, `YUV`, `YCrCb`.
+Parameter value `ALL` results in a huge performance impact and `GRAY` is better but also increases the performance a bit, so the channels were set to `0`.
+
+#### Train a classifier using the selected HOG features (and color features)
+
+The training samples could not train the classifier to distict between cars and shadows, so some new training data was extracted from the `project_video.mp4` using the script `create_non_vehicle_data.py`.
+
+To train the classifier you must execute the following command:
+
+```bash
+python train.py --input-cars vehicles/ --input-non-cars non-vehicles/ neg_augmentation_img/ -o vehicle_classifier.p
+```
+
+This is the output of the training script:
+
+```output
+Data summary
+============
+Total cars: 8792 non-cars: 10600
+Train cars: 7065 non-cars: 8448
+Test cars: 1727 non-cars: 2152
+Reading images and extracting features...
+Using the following parameters:
+classify_img_size = (64, 64)
+color_space = YCrCb
+spatial_size = (16, 16)
+hist_bins = 16
+hist_range = (0, 256)
+orient = 9
+pix_per_cell = 8
+cell_per_block = 2
+hog_channels = 0
+61.89 seconds to read images and extract features...
+Feature length per item: 2580
+Start training SVC...
+10.1 seconds to train SVC...
+Train Accuracy of SVC =  0.9999
+Test Accuracy of SVC =  0.9732
+Save classifier to: vehicle_classifier.p
+```
+
+### Sliding Window Search
+
+#### Scales and overlap of windows
+
+The scales and overlaps are defined in the function `get_windows(img)` in the file `vehicle_classifier.py`.
+There are four different scales used:
+
+![sliding_windows1.png](examples/sliding_windows1.png)
+![sliding_windows2.png](examples/sliding_windows2.png)
+![sliding_windows3.png](examples/sliding_windows3.png)
+![sliding_windows4.png](examples/sliding_windows4.png)
+
+resulting in:
+
+![sliding_windows_all.png](examples/sliding_windows_all.png)
+
+#### Pipeline for searching vehicles
+
+First the sliding windows are classified using the trained classifier.
+The hot windows are shown in the following image:
+
+![hot_windows.png](examples/hot_windows.png)
+
+### Video Implementation
+
+Here's a [link to my video result](output/project_video_2018-06-11_15-53-06.mp4).
+
+
+#### Filter false positives and combine overlapping bounding boxes
+
+To remove false positives and accumulate multiple detections, all hot windows of one frame are summed up into one heatmap and then thresholded:
+
+![heatmap.png](examples/heatmap.png)
+
+To improve this step further, a second heatmap is used, which sums the heatmaps of multiple frames:
+
+```python
+multiple_frames_heatmap *= 0.7
+multiple_frames_heatmap += heat
+```
+
+The result in shown in the following image:
+
+![heatmap_accumulated.png](examples/heatmap_accumulated.png)
+
+Afterwards `scipy.ndimage.measurements.label()` is used to identify individual blobs in the heatmap.
+Each blob is assumed to correspond to a vehicle.
+Bounding boxes are constructed to cover the area of each blob detected.
+
+![heatmap_multiple_frames.png](examples/heatmap_multiple_frames.png)
+
+### Discussion
+
+#### Any problems / issues faced during implementation of this project
+
+The biggest issue was that the shadows and road guard were detected as vehicles in almost all of the frames in the `test_video.mp4`.
+Tuning the parameters of the feature extraction and the sliding windows did not result in a better classifier.
+Even the test accuracy of the classifier was quite good, the large number of false positives could not be reduced in the `test_video.mp4` or the `project_video.mp4`.
+
+To reduce this large amount of false positives a new dataset was created from images from the `project_video.mp4` within the folder `non-vehicles_project_video`.
+
+This was the only step I found, to reduce the false positives.
+
+#### Where will the pipeline likely fail? What could you do to make it more robust?
+
+The pipeline is likely to fail if the camera is mounted in a different angle within the car.
+
+The robustness of the pipeline can also be improved using a kalman filter or something similar, to track vehicle movements across multiple frames and further filter the positions of the cars.
+
+---
 
 # Advanced Lane Finding Project
 
