@@ -24,7 +24,7 @@ class VehicleClassifier:
                 orient,
                 pix_per_cell,
                 cell_per_block,
-                hog_channel):
+                hog_channels):
         self.scaler = scaler
         self.classifier = classifier
         self.classify_img_size = classify_img_size
@@ -35,7 +35,7 @@ class VehicleClassifier:
         self.orient = orient
         self.pix_per_cell = pix_per_cell
         self.cell_per_block = cell_per_block
-        self.hog_channel = hog_channel # Can be 0, 1, 2, 'GRAY' or 'ALL'
+        self.hog_channels = hog_channels # Can be 0, 1, 2, 'GRAY' or 'ALL'
 
         self.windows = None
 
@@ -51,7 +51,7 @@ class VehicleClassifier:
         data['orient'] = self.orient
         data['pix_per_cell'] = self.pix_per_cell
         data['cell_per_block'] = self.cell_per_block
-        data['hog_channel'] = self.hog_channel
+        data['hog_channels'] = self.hog_channels
         pickle.dump(data, open(fname, "wb"))
 
     @classmethod
@@ -68,7 +68,7 @@ class VehicleClassifier:
             data['orient'],
             data['pix_per_cell'],
             data['cell_per_block'],
-            data['hog_channel']
+            data['hog_channels']
         )
 
     def classify(self, features):
@@ -158,19 +158,19 @@ class VehicleClassifier:
         # 32x32 raw pixels in some color space
         spatial_features = self.bin_spatial(feature_image)
         # HOG features
-        if self.hog_channel == 'ALL':
+        if self.hog_channels == 'ALL':
             hog_features = []
             for channel in range(feature_image.shape[2]):
                 hog_features.append(self.get_hog_features(feature_image[:,:,channel],
                                     vis=False, feature_vec=True))
             hog_features = np.ravel(hog_features)
-        elif self.hog_channel == 'GRAY':
+        elif self.hog_channels == 'GRAY':
             gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
             #gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
             hog_features = self.get_hog_features(gray,
                                     vis=False, feature_vec=True)
         else:
-            hog_features = self.get_hog_features(feature_image[:,:,self.hog_channel],
+            hog_features = self.get_hog_features(feature_image[:,:,self.hog_channels],
                                     vis=False, feature_vec=True)
         # combine features
         features = np.concatenate([hist_features, spatial_features, hog_features])
