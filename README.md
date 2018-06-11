@@ -117,7 +117,7 @@ Save classifier to: vehicle_classifier.p
 #### Scales and overlap of windows
 
 The scales and overlaps are defined in the function `get_windows(img)` in the file `vehicle_classifier.py`.
-There are four different scales used:
+There are four different scales and an overlapping of `0.7` used:
 
 ![sliding_windows1.png](examples/sliding_windows1.png)
 ![sliding_windows2.png](examples/sliding_windows2.png)
