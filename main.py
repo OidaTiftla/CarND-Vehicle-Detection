@@ -71,6 +71,7 @@ def process_video(fname):
     ##clip = VideoFileClip(fname).subclip(0,5)
     # project_video.mp4
     # clip = VideoFileClip(fname).subclip(20, 27)
+    # clip = VideoFileClip(fname).subclip(20, 22)
     # clip = VideoFileClip(fname).subclip(38, 43)
     # clip = VideoFileClip(fname).subclip(48.5, None)
     clip = VideoFileClip(fname)
