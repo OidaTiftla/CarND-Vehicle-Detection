@@ -130,6 +130,20 @@ The hot windows are shown in the following image:
 
 Here's a [link to my video result](output/project_video_2018-06-11_15-53-06.mp4).
 
+The following line creates the video linked above:
+
+```bash
+python main.py -i project_video.mp4 -vvo
+```
+
+or for the `test_video.mp4`:
+
+```bash
+python main.py -i test_video.mp4 -vvo
+```
+
+Where `-o` says the output should be saved into the `output`-folder and `-vv` sets the verbose level to `2` (showing some calculated road parameters, the top-down-view, the heatmap and the bounding boxes of the tracked vehicles).
+The maximum verbose level is 5, and can be defined by `-vvvvv`.
 
 #### Filter false positives and combine overlapping bounding boxes
 
@@ -323,11 +337,17 @@ Here's a [link to my video result](output/project_video_2018-05-31_16-36-26.mp4)
 You can rerun the video by executing this line in the shell:
 
 ```bash
-python detect_lane_lines.py --input project_video.mp4 -ovv
+python main.py -i project_video.mp4 -vvo
 ```
 
-Where `-o` says the output should be saved into the `output`-folder and `-vv` sets the verbose level to `2` (showing some calculated road parameters and the two-down-view).
-The maximum verbose level is 4, and can be defined by `-vvvv`.
+or for the `test_video.mp4`:
+
+```bash
+python main.py -i test_video.mp4 -vvo
+```
+
+Where `-o` says the output should be saved into the `output`-folder and `-vv` sets the verbose level to `2` (showing some calculated road parameters, the top-down-view, the heatmap and the bounding boxes of the tracked vehicles).
+The maximum verbose level is 5, and can be defined by `-vvvvv`.
 
 ### Discussion
 
