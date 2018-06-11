@@ -8,7 +8,12 @@ from vehicle_classifier import VehicleClassifier
 class VehicleTracker:
     def __init__(self, classifier):
         self.classifier = classifier
-        self.heatmap_over_multiple_frames = None
+        self.frame_heatmap_clip = (0, 6)
+        self.frame_heatmap_threshold = 1
+        self.multiple_frames_heatmap = None
+        self.multiple_frames_heatmap_decrease_rate = 0.7
+        self.multiple_frames_heatmap_clip = (0, 20)
+        self.multiple_frames_heatmap_threshold = 6
 
     def process(self, img, img_annotated, verbose=0):
         # Note: img is already the undistorted image
@@ -24,23 +29,22 @@ class VehicleTracker:
         # heat map
         heat = np.zeros_like(img[:,:,0]).astype(np.float)
         heat = self.add_heat(heat, hot_windows)
-        # heat = np.clip(heat, 0, 6)
-        heat = self.apply_threshold(heat, 2)
-        heat[heat > 0] = 1
+        heat = np.clip(heat, self.frame_heatmap_clip[0], self.frame_heatmap_clip[1])
+        heat = self.apply_threshold(heat, self.frame_heatmap_threshold)
         if verbose >= 4:
             # display windows
             import matplotlib.pyplot as plt
             plt.imshow(heat)
             plt.show()
         # track over multiple frames
-        if self.heatmap_over_multiple_frames is None:
-            self.heatmap_over_multiple_frames = heat
+        if self.multiple_frames_heatmap is None:
+            self.multiple_frames_heatmap = heat
         else:
-            self.heatmap_over_multiple_frames *= 0.7
-            self.heatmap_over_multiple_frames += heat
-        self.heatmap_over_multiple_frames = np.clip(self.heatmap_over_multiple_frames, 0, 15)
+            self.multiple_frames_heatmap *= self.multiple_frames_heatmap_decrease_rate
+            self.multiple_frames_heatmap += heat
+        self.multiple_frames_heatmap = np.clip(self.multiple_frames_heatmap, self.multiple_frames_heatmap_clip[0], self.multiple_frames_heatmap_clip[1])
         # threshold heat map
-        heat = self.apply_threshold(self.heatmap_over_multiple_frames.copy(), 3)
+        heat = self.apply_threshold(self.multiple_frames_heatmap.copy(), self.multiple_frames_heatmap_threshold)
         # label pixels which belong to the same cars
         labels = label(heat)
         # create bounding boxes around the identified labels
@@ -53,7 +57,7 @@ class VehicleTracker:
         # Sanity checks & tracking (vehicle velocity vector)
 
         # Visualize the result
-        img_annotated = self.visualize(img, img_annotated, self.heatmap_over_multiple_frames, vehicles, verbose)
+        img_annotated = self.visualize(img, img_annotated, self.multiple_frames_heatmap, vehicles, verbose)
 
         return img_annotated
 
@@ -96,7 +100,7 @@ class VehicleTracker:
             # color heatmap
             import matplotlib.pyplot as plt
             cmap = plt.get_cmap('jet')
-            rgba_heatmap = cmap(heatmap / 15.)
+            rgba_heatmap = cmap(heatmap / float(self.multiple_frames_heatmap_clip[1]))
             rgb_heatmap = np.delete(rgba_heatmap, 3, 2)
             rgb_heatmap = (rgb_heatmap * 255).astype(np.uint8)
             img_annotated = helper.weighted_img(rgb_heatmap, img_annotated)
