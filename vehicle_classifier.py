@@ -244,7 +244,7 @@ class VehicleClassifier:
 
     def normalize(self, features):
         # Apply the scaler to features
-        return self.scaler.transform(features)
+        return self.scaler.transform(features.astype(np.float64))
 
     # Define a function to compute color histogram features
     def color_hist(self, img):
