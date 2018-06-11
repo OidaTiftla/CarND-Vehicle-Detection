@@ -16,6 +16,17 @@ print("Load vehicle classifier from:", args.classifier)
 from vehicle_classifier import VehicleClassifier
 vehicle_classifier = VehicleClassifier.from_file(args.classifier)
 
+print("Using the following parameters:")
+print('classify_img_size =', vehicle_classifier.classify_img_size)
+print('color_space =', vehicle_classifier.color_space)
+print('spatial_size =', vehicle_classifier.spatial_size)
+print('hist_bins =', vehicle_classifier.hist_bins)
+print('hist_range =', vehicle_classifier.hist_range)
+print('orient =', vehicle_classifier.orient)
+print('pix_per_cell =', vehicle_classifier.pix_per_cell)
+print('cell_per_block =', vehicle_classifier.cell_per_block)
+print('hog_channels =', vehicle_classifier.hog_channels)
+
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt

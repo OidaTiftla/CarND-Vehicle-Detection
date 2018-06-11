@@ -336,6 +336,18 @@ class VehicleClassifierTrainer:
 
         # read images
         print("Reading images and extracting features...")
+        # parameters
+        print("Using the following parameters:")
+        print('classify_img_size =', self.classifier.classify_img_size)
+        print('color_space =', self.classifier.color_space)
+        print('spatial_size =', self.classifier.spatial_size)
+        print('hist_bins =', self.classifier.hist_bins)
+        print('hist_range =', self.classifier.hist_range)
+        print('orient =', self.classifier.orient)
+        print('pix_per_cell =', self.classifier.pix_per_cell)
+        print('cell_per_block =', self.classifier.cell_per_block)
+        print('hog_channels =', self.classifier.hog_channels)
+
         t1 = time.time()
         # training dataset
         X_train = []
@@ -376,6 +388,8 @@ class VehicleClassifierTrainer:
             y_test.append(label)
         t2 = time.time()
         print(round(t2-t1, 2), 'seconds to read images and extract features...')
+
+        print('Feature length per item:', len(X_train[0]))
 
         # Create an array stack, NOTE: StandardScaler() expects np.float64
         X_train = np.vstack(X_train).astype(np.float64)
