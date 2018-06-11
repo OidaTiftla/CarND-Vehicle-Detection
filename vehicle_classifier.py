@@ -4,6 +4,7 @@ import pickle
 import cv2
 import time
 import helper
+import random
 from sklearn.utils import shuffle
 from sklearn.svm import LinearSVC
 from sklearn.preprocessing import StandardScaler
@@ -351,6 +352,20 @@ class VehicleClassifierTrainer:
         print('pix_per_cell =', self.classifier.pix_per_cell)
         print('cell_per_block =', self.classifier.cell_per_block)
         print('hog_channels =', self.classifier.hog_channels)
+
+        # display example HOG features
+        if self.classifier.hog_channels in [0, 1, 2]:
+            hog_vis = []
+            for i in range(6):
+                index = random.randint(0, len(files_train))
+                img = helper.read_img(files_train[index])
+                _, vis = self.classifier.get_hog_features(img[:,:,self.classifier.hog_channels], vis=True)
+                vis = ((vis - np.min(vis)) / (np.max(vis) - np.min(vis)) * 255).astype(np.uint8)
+                vis = helper.ensure_color(vis)
+                hog_vis.append(np.vstack((img, vis)))
+            img = np.hstack(hog_vis)
+            plt.imshow(img)
+            plt.show()
 
         t1 = time.time()
         # training dataset
